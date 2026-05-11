@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Save Your Friend! - Bot Championship</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header>
+        <h1>🪙 Save Your Friend!</h1>
+        <p id="status-text">Connecting to server...</p>
+    </header>
+
+    <main id="registration-view">
+        <section class="card">
+            <h2>Register Your Avatar-Bot</h2>
+            <div class="input-group">
+                <input type="email" id="email" placeholder="Google Email" required>
+                <input type="text" id="avatar-name" placeholder="Avatar Name" required>
+            </div>
+            
+            <label for="bot-code">Write your JS logic here:</label>
+            <textarea id="bot-code" spellcheck="false">
+function play(piles, forbidden, context) {
+    // Return { pileIndex: 0, count: 1 }
+    const target = piles.findIndex(p => p > 0);
+    return { pileIndex: target, count: 1 };
+}
+            </textarea>
+            <button id="btn-register" onclick="register()">Enter Championship</button>
+        </section>
+    </main>
+
+    <main id="dashboard-view" class="hidden">
+        <div class="game-container">
+            <section class="arena card">
+                <h2>Live Battle</h2>
+                <div id="player-names">
+                    <span id="p1-label">Waiting...</span> vs <span id="p2-label">Waiting...</span>
+                </div>
+                <div id="piles-display">
+                    </div>
+                <div id="game-log"></div>
+            </section>
+
+            <aside class="leaderboard card">
+                <h2>Leaderboard</h2>
+                <table id="score-table">
+                    <thead>
+                        <tr><th>Player</th><th>Score</th><th>Bank</th></tr>
+                    </thead>
+                    <tbody id="leaderboard-body"></tbody>
+                </table>
+            </aside>
+        </div>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
