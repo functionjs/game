@@ -14,6 +14,24 @@ In GitHub Codespace terminal, run:
 
 ### 2. Key Explanations about Game Server 
 
+On Registration by  e-mail and writing Bot-Avatar Name  Gamer must copypast (or write) text of main  Bot function play() by pattern:
+```javascript
+// piles:     array of integers  (coins) representing the current state of the game
+// forbidden: array of forbidden moves
+// context:   { mode: CONFIG.mode, timeRemaining: player.timeBank } 
+//                    CONFIG.mode can be "NORMAL" or "GIVEAWAY" (see rules for details)
+//OUTPUTS: Return an object { pileIndex: target, count: N };
+//For example { pileIndex: 0, count: 1 } represents Bot's  want to take 1 coin from pile 0 
+
+function play(piles, forbidden, context) {
+                                         // TO DO 
+                                         // const target = piles.findIndex(p => p > 0);
+                                         //  if(piles[target]== 1) N = 1;
+                                         //  ....
+                                         //   return { pileIndex: target, count: N }; 
+}
+```
+
 * **`vm.Script`**: This is like a "protective bubble." It runs the student's code, but if their code has an infinite loop (`while(true)`), the `timeout` setting pops the bubble and stops it before the server crashes.
 * **`players` Object**: This is our database. It stays in the server's memory. If you restart the server, the "database" wipes clean (simplest way).
 * **`broadcast`**: This sends a message to everyone who has the website open. This is how the "Live Dashboard" works.
