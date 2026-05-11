@@ -1,5 +1,7 @@
 # Nim like game platform for testing gamer-bots
 
+<img src=https://hackmd.io/_uploads/BJ1MQ3kJGl.png>
+
 ## Game Server  is the "Brain" of your project. 
 
 
