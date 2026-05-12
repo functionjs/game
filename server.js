@@ -98,7 +98,7 @@ let matchMatrix = {}; // Stores results of matches for the matrix display
 var CONFIG = {
                mode: "NORMAL", // "" or "GIVEAWAY"
                piles: [3, 5, 7], // Initial piles
-               forbidden: [2], // Example: can't take 2 from any pile
+               forbidden: [0], // Example: can't take 0 from any pile
                baseTime: 1000,   // ms
                maxCodeSize: 2048, // bytes
                numberOfGamesPerMatch: 10 // Number of games each pair of Bots will play against each other
@@ -207,47 +207,47 @@ startChampionship() {
                              broadcast({ type: "END", players });// After all matches are done, broadcast the final results to the dashboard
 }
 
-async function 
-runMatch(emailA, emailB) { // Run a match of numberOfGamesPerMatch (default: 10) games between two Bots, alternating who goes first, and applying the time carry-over logic based on the tournament mode
-                          let botA = players[emailA];
-                          let botB = players[emailB];
-                          const N = CONFIG.numberOfGamesPerMatch;
-                           for (let game = 1; game <= N; game++) {
-                                let currentFirstPlayer = (game % 2 === 1) ? emailA : emailB; // Alternate who goes first each game
-                                 let state = { piles: [...CONFIG.piles], turn: currentFirstPlayer};
-                                  broadcast({ type: "CURRENT_FIGHT", fight: { playerA: botA.name, playerB: botB.name, game, totalGames: N } });
-
-                                  // Main game loop for a single game between two Bots while there are still valid moves to be made (not Game Over)
-                                  while (!isGameOver(state.piles)) {
-                                          let currentPlayer = players[state.turn];
-                                           let move = runBotSafe(currentPlayer, state.piles);
-                                            // Validate currentPlayer Move 
-                                            if (move.error || !isValidMove(move, state.piles)) {
-                                                console.log(`${currentPlayer.name}(${state.turn}) disqualified for invalid move:`,move, " for piles: ", state.piles);
-                                                broadcast({ type: "DISQUALIFIED_FOR_INVALID_MOVE", piles: state.piles, player: currentPlayer.name });
-                                                 currentPlayer.score -= 10;``
-                                                  break; 
-                                            }
-                                             // Apply Valid Move
-                                             state.piles[move.pileIndex] -= move.count;
-                                              broadcast({ type: "MOVE", piles: state.piles, player: currentPlayer.name });
-                                      
-                                              // Switch Turn
-                                              state.turn = (state.turn === emailA ? emailB : emailA);
-                                               await new Promise(delayresolve => setTimeout(delayresolve, 500 /*ms*/)); // Slow down for dashboard viewers
-                                  }
-                              
-                                    // Determine Winner & Time Carry-over logic
-                                    let winnerEmail = (CONFIG.mode === "NORMAL") ? state.turn 
-                                                                                 : (state.turn === emailA ? emailB 
-                                                                                                          : emailA);
-                                     players[winnerEmail].score += 1;
-                                     players[winnerEmail].timeBank += 100; // Small bonus for winning
-                                      recordMatchResult(emailA, emailB, winnerEmail, 100);
-                                       const Matrix = getMatchMatrixDisplay();
-                                        broadcast({ type: "MATCH_UPDATE", players, matchMatrix: Matrix });
-                           }// End loop of all games between emailA and emailB
-}
+    async function 
+    runMatch(emailA, emailB) { // Run a match of numberOfGamesPerMatch (default: 10) games between two Bots, alternating who goes first, and applying the time carry-over logic based on the tournament mode
+                              let botA = players[emailA];
+                              let botB = players[emailB];
+                              const N = CONFIG.numberOfGamesPerMatch;
+                               for (let game = 1; game <= N; game++) {
+                                    let currentFirstPlayer = (game % 2 === 1) ? emailA : emailB; // Alternate who goes first each game
+                                     let state = { piles: [...CONFIG.piles], turn: currentFirstPlayer};
+                                      broadcast({ type: "CURRENT_FIGHT", fight: { playerA: botA.name, playerB: botB.name, game, totalGames: N } });
+    
+                                      // Main game loop for a single game between two Bots while there are still valid moves to be made (not Game Over)
+                                      while (!isGameOver(state.piles)) {
+                                              let currentPlayer = players[state.turn];
+                                               let move = runBotSafe(currentPlayer, state.piles);
+                                                // Validate currentPlayer Move 
+                                                if (move.error || !isValidMove(move, state.piles)) {
+                                                    console.log(`${currentPlayer.name}(${state.turn}) disqualified for invalid move:`,move, " for piles: ", state.piles);
+                                                    broadcast({ type: "DISQUALIFIED_FOR_INVALID_MOVE", piles: state.piles, player: currentPlayer.name });
+                                                     currentPlayer.score -= 10;``
+                                                      break; 
+                                                }
+                                                 // Apply Valid Move
+                                                 state.piles[move.pileIndex] -= move.count;
+                                                  broadcast({ type: "MOVE", piles: state.piles, player: currentPlayer.name });
+                                          
+                                                  // Switch Turn
+                                                  state.turn = (state.turn === emailA ? emailB : emailA);
+                                                   await new Promise(delayresolve => setTimeout(delayresolve, 500 /*ms*/)); // Slow down for dashboard viewers
+                                      }
+                                  
+                                        // Determine Winner & Time Carry-over logic
+                                        let winnerEmail = (CONFIG.mode === "NORMAL") ? state.turn 
+                                                                                     : (state.turn === emailA ? emailB 
+                                                                                                              : emailA);
+                                         players[winnerEmail].score += 1;
+                                         players[winnerEmail].timeBank += 100; // Small bonus for winning
+                                          recordMatchResult(emailA, emailB, winnerEmail, 100);
+                                           const Matrix = getMatchMatrixDisplay();
+                                            broadcast({ type: "MATCH_UPDATE", players, matchMatrix: Matrix });
+                               }// End loop of all games between emailA and emailB
+    }
 
 // --- HELPER FUNCTIONS ---
 function isValidMove(move, piles) {

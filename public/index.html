@@ -40,10 +40,10 @@
 
 function play(piles, forbidden, context) {
                                          // TO DO 
-                                         // const target = piles.findIndex(p => p > 0);
-                                         //  if(piles[target]== 1) N = 1;
-                                         //  ....
-                                         //   return { pileIndex: target, count: N }; 
+                                         const target = piles.findIndex(p => p > 0);
+                                          if(piles[target]== 1) N = 1;
+                                          else                  N = 2;
+                                           return { pileIndex: target, count: N }; 
 }
             </textarea>
             <button id="btn-register" onclick="register()">Enter Championship</button>

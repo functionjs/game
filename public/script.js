@@ -73,9 +73,9 @@ function handleServerEvent(data) {
     }
 
     if (data.type === "MATCH_UPDATE") {
-        updateLeaderboard(data.players, data.matchMatrix);
-        return;
-    }
+                                        updateLeaderboard(data.players, data.matchMatrix);
+                                         return;
+                                      }
 
     if (data.type === "MOVE") {
         updatePiles(data.piles);
@@ -163,50 +163,53 @@ function updatePiles(piles) {
     });
 }
 
-function updateLeaderboard(players, matrix) {
-    renderPlayerList(players);
-    const body = document.getElementById('leaderboard-body');
-    body.innerHTML = '';
-    
-    Object.values(players).sort((a,b) => b.score - a.score).forEach(p => {
-        body.innerHTML += `<tr><td>${p.name}</td><td>${p.score}</td><td>${p.timeBank}ms</td></tr>`;
-    });
-
-    if (matrix && Array.isArray(matrix)) {
-        renderMatchMatrix(matrix, players);
+    function updateLeaderboard(players, matrix) {
+                                                 renderPlayerList(players);
+                                                  const body = document.getElementById('leaderboard-body');
+                                                   body.innerHTML = '';
+                                                    Object.values(players)
+                                                     .sort((a,b) => b.score - a.score)
+                                                      .forEach(p => {
+                                                                     body.innerHTML += `<tr><td>${p.name}</td><td>${p.score}</td><td>${p.timeBank}ms</td></tr>`;
+                                                                    }
+                                                              );
+                                                   console.log("Updating match matrix with entries:", matrix);  
+                                                   if (matrix /*&& Array.isArray(matrix)*/) {
+                                                        renderMatchMatrix(matrix, players);
+                                                   }
     }
-}
+        function renderPlayerList(players) {
+                                             if (!playerList) return;
 
-function renderPlayerList(players) {
-    if (!playerList) return;
-    const names = Object.values(players).map(p => p.name);
-    playerList.innerText = `Contestants: ${names.join(' • ')}`;
-}
+                                                 const names = Object.values(players).map(p => p.name);
+                                                  playerList.innerText = `Contestants: ${names.join(' • ')}`;
+        }
+        function renderMatchMatrix(matrixEntries, players) {
+                                                            if (!matchMatrixTable) return;
+        
+                                                                const names = Object.values(players).map(p => p.name);
+                                                                 const header = `<tr><th></th>${names.map(name => `<th>${name}</th>`).join('')}</tr>`;
+                                                                 const rows = names.map(rowName => {
+                                                                                                    const cells = names.map(colName => {
+                                                                                                                                         if (rowName === colName) return '<td class="self-cell">🤖</td>';
+                                                                                                                                         const match = matrixEntries.find(entry =>
+                                                                                                                                                                                   (entry.playerA === rowName && entry.playerB === colName) ||
+                                                                                                                                                                                   (entry.playerA === colName && entry.playerB === rowName)
+                                                                                                                                                                         );
+                                                                                                                                          if (!match) return '<td>?</td>';
 
-function renderMatchMatrix(matrixEntries, players) {
-    if (!matchMatrixTable) return;
-
-    const names = Object.values(players).map(p => p.name);
-    const header = `<tr><th></th>${names.map(name => `<th>${name}</th>`).join('')}</tr>`;
-    const rows = names.map(rowName => {
-        const cells = names.map(colName => {
-            if (rowName === colName) return '<td class="self-cell">—</td>';
-            const match = matrixEntries.find(entry =>
-                (entry.playerA === rowName && entry.playerB === colName) ||
-                (entry.playerA === colName && entry.playerB === rowName)
-            );
-            if (!match) return '<td></td>';
-            const isA = match.playerA === rowName;
-            const wins = isA ? match.winsA : match.winsB;
-            const losses = isA ? match.winsB : match.winsA;
-            const bonus = isA ? match.bonusA : match.bonusB;
-            return `<td>${wins}W / ${losses}L<br>+${bonus}ms</td>`;
-        });
-        return `<tr><th>${rowName}</th>${cells.join('')}</tr>`;
-    });
-
-    matchMatrixTable.innerHTML = header + rows.join('');
-}
+                                                                                                                                             const isA = (match.playerA === rowName);
+                                                                                                                                              const wins   = isA ? match.winsA  : match.winsB;
+                                                                                                                                              const losses = isA ? match.winsB  : match.winsA;
+                                                                                                                                              const bonus  = isA ? match.bonusA : match.bonusB;
+                                                                                                                                               return `<td>${wins}W / ${losses}L<br>+${bonus}ms</td>`;
+                                                                                                                                       }
+                                                                                                                           );
+                                                                                                     return `<tr><th>${rowName}</th>${cells.join('')}</tr>`;
+                                                                                                  }
+                                                                                        );
+                                                                  matchMatrixTable.innerHTML = header + rows.join('');
+        }
 
 function logEvent(msg) {
     const log = document.getElementById('game-log');
