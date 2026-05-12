@@ -9,8 +9,6 @@ const playerList = document.getElementById('player-list');
 
 let countdownInterval = null;
 let deadlineStartTime = null;
-let consecutiveLogoEnters = 0;
-let lastLogoEnterTime = 0;
 
 function connect() {
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
@@ -31,24 +29,24 @@ function connect() {
 }
 
 async function register() {
-    const payload = {
-        email: document.getElementById('email').value,
-        name: document.getElementById('avatar-name').value,
-        code: document.getElementById('bot-code').value
-    };
+                            const payload = {
+                                email: document.getElementById('email').value,
+                                name: document.getElementById('avatar-name').value,
+                                code: document.getElementById('bot-code').value
+                            };
 
-    const response = await fetch('/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    });
-
-    if (response.ok) {
-        regView.classList.add('hidden');
-        dashView.classList.remove('hidden');
-    } else {
-        alert("Registration failed. Check your code size!");
-    }
+                             const response = await fetch('/register', {
+                                                                         method: 'POST',
+                                                                         headers: { 'Content-Type': 'application/json' },
+                                                                         body: JSON.stringify(payload)
+                                                                       });
+                         
+                              if (response.ok) {
+                                                regView.classList.add('hidden');
+                                                dashView.classList.remove('hidden');
+                                               }
+                              else    alert("Registration failed. Check your code size!");
+                                   
 }
 
 // 3. Handle incoming Game Events
@@ -123,25 +121,19 @@ function updateDeadlineTimer() {
         deadlineText.innerText = `Tournament starts in ${minutes}:${seconds}`;
     }
 }
-
-function handleLogoHover() {
-    const now = Date.now();
-    if (now - lastLogoEnterTime > 2500) {
-        consecutiveLogoEnters = 1;
-    } else {
-        consecutiveLogoEnters += 1;
-    }
-    lastLogoEnterTime = now;
-
-    if (consecutiveLogoEnters === 3) {
-        consecutiveLogoEnters = 0;
-        logEvent("🧠 Easter egg activated: requesting early tournament start!");
-        if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ type: "START_TOURNAMENT_REQUEST" }));
-        }
-        beginContest();
-    }
-}
+      //----------for early contest start -----------------------------------------------------
+      let consecutiveLogoEnters = 0;
+      function handleLogoHover() {
+                                   consecutiveLogoEnters += 1;
+                                    if (consecutiveLogoEnters === 3) {
+                                         logEvent("🧠 Easter egg activated: requesting early tournament start!");
+                                         if (ws && ws.readyState === WebSocket.OPEN) {
+                                             ws.send(JSON.stringify({ type: "START_TOURNAMENT_REQUEST" }));
+                                         }
+                                          beginContest();
+                                   }
+      }                         
+logo.addEventListener('mouseenter', handleLogoHover);
 
 function beginContest() {
     if (countdownInterval) {
