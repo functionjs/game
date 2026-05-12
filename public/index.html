@@ -57,29 +57,32 @@ function play(piles, forbidden, context) {
 
     <main id="dashboard-view" class="hidden">
         <div class="game-container">
+
             <section class="arena card">
                 <h2>Live Battle</h2>
-                <div id="player-names">
-                    <span id="p1-label">Waiting...</span> vs <span id="p2-label">Waiting...</span>
-                </div>
+
                 <div id="current-fight" class="current-fight">Waiting for current fight...</div>
-                <div id="piles-display">
-                    </div>
-                <div id="game-log"></div>
+
+                 <div id="piles-display">?</div>
+
+                 <div id="game-log"></div>
             </section>
 
             <aside class="leaderboard card">
+
                 <h2>Leaderboard</h2>
-                <div id="player-list" class="player-list">Contestants will appear here</div>
+
                 <table id="score-table">
                     <thead>
                         <tr><th>Player</th><th>Score</th><th>Bank</th></tr>
                     </thead>
                     <tbody id="leaderboard-body"></tbody>
                 </table>
+
                 <div id="match-matrix-container" class="matrix-container">
-                    <table id="match-matrix"></table>
+                    <div id="match-matrix"></div>
                 </div>
+
             </aside>
         </div>
     </main>

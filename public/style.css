@@ -110,26 +110,15 @@ button {
     min-width: 600px;
 }
 
-#match-matrix th,
-#match-matrix td {
+#match-matrix {
     border: 1px solid rgba(255,255,255,0.12);
     padding: 10px 12px;
     text-align: center;
     font-size: 0.95rem;
-}
-
-#match-matrix th {
     background: rgba(0,255,204,0.08);
     color: #d9fff7;
 }
 
-#match-matrix td {
-    color: #e2e2e2;
-}
-
-#match-matrix td.self-cell {
-    background: rgba(255,255,255,0.04);
-}
 
 /* Dashboard Layout */
 .game-container {
@@ -141,15 +130,15 @@ button {
 }
 
 .leaderboard {
-    max-height: calc(100vh - 180px);
+    max-height: calc(200vh - 180px);
     overflow-y: auto;
 }
 
 #piles-display {
     display: flex;
     justify-content: space-around;
-    font-size: 3rem;
-    padding: 40px 0;
+    font-size: 1rem;
+    padding: 10px 0;
 }
 
 #game-log {

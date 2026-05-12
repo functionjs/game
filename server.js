@@ -11,6 +11,9 @@ const    wss = new WebSocketServer({ server }); // WebSocket server for real-tim
         app.use(express.static('public')); // Serves your index.html
 
          // --- ROUTES ---
+         var playersNumber = 0;
+         var players = {};
+         
          app.post('/register', 
                   //--------------------------------------------------------------------- 
                  // Endpoint for players to register their Bot code. Expects { email, name, code } in the request body. Validates code size and stores player info. 
@@ -23,8 +26,12 @@ const    wss = new WebSocketServer({ server }); // WebSocket server for real-tim
                                          return res.status(400).send(errmessage);    
                                  }
                                   
-                                  //else player registration is successful, store their info in the players object, using email as a unique identifier
+                                  //else player registration is successful, store their info in the players object
+                                  let  idx= playersNumber;
+                                    playersNumber++;
+                                    
                                          players[email] = { 
+                                                           idx,
                                                            name, 
                                                            code, 
                                                            timeBank: CONFIG.baseTime, 
@@ -33,7 +40,7 @@ const    wss = new WebSocketServer({ server }); // WebSocket server for real-tim
                                                          };
                                          
                                           broadcast({ type: "NEW_PLAYER", name });
-                                          console.log(`     Registered!  Total players: ${Object.keys(players).length}`);
+                                          console.log(`     Registered!  Total players: ${playersNumber}`);
                                           res.send("Registered!");
                                 }
         );
@@ -46,7 +53,7 @@ const PORT = 3000;
                                     console.log(`Server running at http://localhost:${PORT}`);
                                     tournamentStartTime = Date.now() + DEFAULT_START_DELAY_MS;
                                      console.log(`Tournament scheduled to start at ${new Date(tournamentStartTime).toLocaleString()}`);
-                                     setTimeout(startChampionship, DEFAULT_START_DELAY_MS);
+                                     startTimeout = setTimeout(startChampionship, DEFAULT_START_DELAY_MS);
                                      broadcast({ type: "START_TIME", startTime: tournamentStartTime });
                                   }
                      );        
@@ -106,8 +113,9 @@ var CONFIG = {
 
 const DEFAULT_START_DELAY_MS = 15 * 60 * 1000; // 15 minutes after server start
 
-// Store players data: { email: { name, code, timeBank, score } }
-var players = {}; 
+
+// Store players data: { email: { idx, name, code, timeBank, score } }
+// idx  is a unique index assigned to each player for matrix display purposes in order of registration,
 // email is used as a unique identifier for players, and also to track match results in the matchMatrix:
 // name  is the display name for the player Avatar-Bot, 
 // code  is their Bot js code (function play()),
@@ -138,21 +146,41 @@ function recordMatchResult(emailA, emailB, winnerEmail, bonus) {
                                                            row.bonusB += bonus;
                                     }
 }                       
-
+var Matrix = [];
+// Generate initial tournament matrix
+function generateInitialMatrix() {
+                                  for (let i = 0; i < playersNumber; i++) {
+                                    Matrix[i] = [];
+                                    for (let j = 0; j < playersNumber; j++) 
+                                        Matrix[i][j] = { winsA: 0, winsB: 0, bonusA: 0, bonusB: 0 };
+                                 }
+}
 function getMatchMatrixDisplay() {
-                                  let allResults = Object.values(matchMatrix);
-                                   let allResultsCopy = allResults.map(row => ({
-                                                                                 playerA: row.playerA,
-                                                                                 playerB: row.playerB,
-                                                                                 winsA: row.winsA,
-                                                                                 winsB: row.winsB,
-                                                                                 bonusA: row.bonusA,
-                                                                                 bonusB: row.bonusB
-                                                                               }))
-                                    return allResultsCopy;
+                                  // Fill matrix with match results using player indices
+                                  for (let key in matchMatrix) {
+                                       let row = matchMatrix[key];
+                                       let idxA = players[row.playerA].idx;
+                                       let idxB = players[row.playerB].idx;
+                                      
+                                        Matrix[idxA][idxB] = {
+                                                              winsA: row.winsA,
+                                                              winsB: row.winsB,
+                                                              bonusA: row.bonusA,
+                                                              bonusB: row.bonusB
+                                                            };
+                                 
+                                       Matrix[idxB][idxA] = {
+                                                             winsA: row.winsB,
+                                                             winsB: row.winsA,
+                                                             bonusA: row.bonusB,
+                                                             bonusB: row.bonusA
+                                                            };
+                                  }
+                                   return Matrix;
+                                  
 }
 
-// --- BOT EXECUTION (The Referee) ---
+// Bots (player) Code EXECUTION on current state (currentPiles) by the "Referee logics" 
 function runBotSafe(player, currentPiles) {
 
          const sandbox = { // Provide the Bot with a safe, read-only view of the game state
@@ -184,6 +212,8 @@ function runBotSafe(player, currentPiles) {
                       }
 }
 
+
+
 // --- TOURNAMENT LOGIC ---
 async function 
 startChampionship() {
@@ -195,16 +225,33 @@ startChampionship() {
                                startTimeout = null;
                           }
                            console.log("🤖🏆🤖 Championship Started!");
-                           broadcast({ type: "TOURNAMENT_STARTED" });
-                           // Run a round-robin tournament where each Bot plays against every other Bot
+                           
+                           // Create player list with indices
                            const emails = Object.keys(players);
+                           const playerList = [];
                             for (let i = 0; i < emails.length; i++) 
-                                for (let j = i + 1; j < emails.length; j++) 
+                                 playerList.push({
+                                                  idx: players[emails[i]].idx,
+                                                  name: players[emails[i]].name,
+                                                  email: emails[i]
+                                                });
+                           
+                           
+                           // Generate and send initial matrix
+                           generateInitialMatrix();
+                            broadcast({ type: "TOURNAMENT_STARTED", players: playerList, matchMatrix: Matrix });
+                           
+                            // Run a round-robin tournament where each Bot plays against every other Bot
+                            for (let i = 0; i < playersNumber; i++) {
+                                for (let j = i + 1; j < playersNumber; j++) {
                                      await runMatch(emails[i], emails[j]);
+                                }
+                           }
                             
                             console.log("🤖🌟🤖 Championship Ended! ");
-                            console.log("Results:", getMatchMatrixDisplay());
-                             broadcast({ type: "END", players });// After all matches are done, broadcast the final results to the dashboard
+                            getMatchMatrixDisplay()
+                             console.log("Results:", Matrix);
+                             broadcast({ type: "END", players, matchMatrix: Matrix });// After all matches are done, broadcast the final results to the dashboard
 }
 
     async function 
@@ -225,7 +272,7 @@ startChampionship() {
                                                 if (move.error || !isValidMove(move, state.piles)) {
                                                     console.log(`${currentPlayer.name}(${state.turn}) disqualified for invalid move:`,move, " for piles: ", state.piles);
                                                     broadcast({ type: "DISQUALIFIED_FOR_INVALID_MOVE", piles: state.piles, player: currentPlayer.name });
-                                                     currentPlayer.score -= 10;``
+                                                     currentPlayer.score -= 10;
                                                       break; 
                                                 }
                                                  // Apply Valid Move
@@ -244,7 +291,7 @@ startChampionship() {
                                          players[winnerEmail].score += 1;
                                          players[winnerEmail].timeBank += 100; // Small bonus for winning
                                           recordMatchResult(emailA, emailB, winnerEmail, 100);
-                                           const Matrix = getMatchMatrixDisplay();
+                                           getMatchMatrixDisplay();
                                             broadcast({ type: "MATCH_UPDATE", players, matchMatrix: Matrix });
                                }// End loop of all games between emailA and emailB
     }
@@ -268,12 +315,13 @@ function isGameOver(piles) {
 function getAvailableMoves(piles) {
                                     // Used by the "Ideal Opponent" or to check if a bot is stuck
                                    let moves = [];
-                                    piles.forEach((count, idx) => {
-                                                                   for (let i = 1; i <= count; i++) 
-                                                                        if (!CONFIG.forbidden.includes(i)) 
-                                                                            moves.push({idx, i});
-                                                                   
-                                                                  });
+                                   for (let idx = 0; idx < piles.length; idx++) {
+                                       for (let i = 1; i <= piles[idx]; i++) {
+                                           if (!CONFIG.forbidden.includes(i)) {
+                                               moves.push({pileIndex: idx, count: i});
+                                           }
+                                       }
+                                   }
                                      return moves;
 }
 
