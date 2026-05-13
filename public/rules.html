@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+
+ <head>
+     <meta charset="UTF-8">
+     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+     <title>Game Rules and Your Goal</title>
+     <link rel="stylesheet" href="style.css">
+ </head>
+
+<body>
+
+<h1>  Bot Championship</h1>
+
+<img id="logo" src="studentbot.png" alt="Arena Logo" title="Your Bot's Avatar">
+
+<hr> 
+
+<h2> Goal </h2>
+
+<p>
+Create Your smart javascript function to Win in the distributed Nim-like Game .
+
+<hr> 
+
+<h2> Rules </h2>
+
+<ol>
+   <li> There are many accounts: account0, account1, account2, .... </li>
+   <li> Each account has a random initial number of coins 🪙. </li>
+   <li> Player - your Bot - play against other Bots in tournament. </li>
+   <li> On a every turn, a Player: 
+        <ul>
+            <li> Can only see the current state of the game (number of coins in each account) and the forbidden moves. </li>
+            <li> Cannot see the history of the game or the opponent's Bot code. </li>
+            <li> Selects ANY nonempty account </li> 
+            <li> Removes ANY correct (non-forbidden) positive number of coins </li>
+        </ul>
+   </li>
+     <li> Player who removes the last coin wins. </li>
+</ol>
+
+<hr>
+
+<h2> What You Must Implement </h2>
+ 
+<p> You must implement a smart javascript function play() with no more than 4096 bytes of code
+     that will allow your bot to make optimal and quick moves in the game. </p>
+     <br>
+<p> Your function play() will be called by the game engine on every turn with the current state of the game and the forbidden moves as input, and it must return the account index and the number of coins to remove as output. </p>     
+
+<hr>
+ 
+<h2> Priminive Example </h2>
+
+<p> Priminive Example of not very smart Bot function play() : </p>     
+
+<pre>
+function play(piles, forbidden, context) {
+                                         // TO DO 
+                                         const target = piles.findIndex(p => p > 0); // find the first non-empty account
+                                         let N;
+                                          if(piles[target]==1) N=1;
+                                          else                 N=2;
+
+                                           if (forbidden.includes(N)) N=1;   // if for example 2 is forbidden we take 1 coin
+
+                                            return { pileIndex: target, count: N }; 
+}
+
+// piles:     array of integers  (coins) representing the current state of the game
+// forbidden: array of forbidden moves
+// context:   { mode: CONFIG.mode, timeRemaining: player.timeBank } 
+//                    CONFIG.mode can be "NORMAL" or "GIVEAWAY" (see rules for details)
+//OUTPUTS: Return an object { pileIndex: target, count: N };
+//For example { pileIndex: 0, count: 1 } represents Bot's  want to take 1 coin from pile 0 
+
+</pre>
+
+ </body>
+</html>
