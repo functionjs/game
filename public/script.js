@@ -163,16 +163,21 @@ function updatePiles(piles) {
     let pilesString = "";
      piles.forEach((count, index) => {
                                       let pileString = "🪙".repeat(count); 
-                                       pilesString += `<div> (${count}) ${pileString} </div>`;
+                                       pilesString += `<div> (${count})${pileString} </div>`;
                                      }
                   );
       display.innerHTML = pilesString;    
 }
 
     function updateLeaderboard(data) {
-                                      let players = data.players;
+                                      let players = ;
                                       let matrix  = data.matchMatrix;
-                                       renderPlayerList(players);
+                                           updatePlayersList(data.players)
+                                           renderMatchMatrix(data.matchMatrix, data.players);
+                                       
+    }
+        function updatePlayersList(players) {
+                                       //renderPlayerList(players);
                                         const body = document.getElementById('leaderboard-body');
                                          body.innerHTML = '';
                                           Object.values(players)
@@ -181,9 +186,13 @@ function updatePiles(piles) {
                                                            body.innerHTML += `<tr><td>${p.name}</td><td>${p.score}</td><td>${p.timeBank}ms</td></tr>`;
                                                           }
                                                     );
-                                          renderMatchMatrix(matrix, players);
-                                       
-    }
+        }
+            function renderPlayerList(players) {
+                                                 if (!playerList) return;
+    
+                                                     const names = Object.values(players).map(p => p.name);
+                                                      playerList.innerText = `Contestants: ${names.join(' • ')}`;
+            }
         function renderMatchMatrix(matrixEntries, players) {
                                                             if (matchMatrixTable.innerHTML.trim() == "") generateMatchMatrixTable(players);
 
@@ -197,40 +206,35 @@ function updatePiles(piles) {
                                                                               cell.innerHTML = `${winsA}`;
                                                                       }        
         }
-        function renderPlayerList(players) {
-                                             if (!playerList) return;
-
-                                                 const names = Object.values(players).map(p => p.name);
-                                                  playerList.innerText = `Contestants: ${names.join(' • ')}`;
-        }
-        function generateMatchMatrixTable(players) {
-                                                    if (matchMatrixTable.innerHTML.trim() !== "") {
-                                                         console.log("Match Matrix Table exists already :", matchMatrixTable);
-                                                          return;           
-                                                     }
-
-                                                         const M = Object.keys(players).length;
-                                                         const playersData = Object.values(players); 
-                                                          const names = playersData    .map(p => p.name);
-                                                         let cells = '<table>';
-                                                          cells += '<thead>';
-                                                           for (let i = 0; i < M; i++) 
-                                                                 cells+= `<th>${names[i]}</th>`;
-                                                            cells += '</thead>';
-                                                             cells += '<tbody>';
-                                                              for (let i = 0; i < M; i++) {    
-                                                                   cells += '<tr>';
-                                                                    for (let j = 0; j < M; j++) {    
-                                                                         let id = `${i}*${j}`
-                                                                          cells += `<td><span id=${id}>?</span></td>`;
-                                                                    }
-                                                                     cells += '</tr>';
-                                                              }
-                                                               cells += '</tbody>';
-                                                                cells += '</table>';  
-                                                                 matchMatrixTable.innerHTML = cells;
-
-        }
+        
+            function generateMatchMatrixTable(players) {
+                                                        if (matchMatrixTable.innerHTML.trim() !== "") {
+                                                             console.log("Match Matrix Table exists already :", matchMatrixTable);
+                                                              return;           
+                                                         }
+    
+                                                             const M = Object.keys(players).length;
+                                                             const playersData = Object.values(players); 
+                                                              const names = playersData    .map(p => p.name);
+                                                             let cells = '<table>';
+                                                              cells += '<thead>';
+                                                               for (let i = 0; i < M; i++) 
+                                                                     cells+= `<th>${names[i]}</th>`;
+                                                                cells += '</thead>';
+                                                                 cells += '<tbody>';
+                                                                  for (let i = 0; i < M; i++) {    
+                                                                       cells += '<tr>';
+                                                                        for (let j = 0; j < M; j++) {    
+                                                                             let id = `${i}*${j}`
+                                                                              cells += `<td><span id=${id}>?</span></td>`;
+                                                                        }
+                                                                         cells += '</tr>';
+                                                                  }
+                                                                   cells += '</tbody>';
+                                                                    cells += '</table>';  
+                                                                     matchMatrixTable.innerHTML = cells;
+    
+            }
 
         
 
@@ -239,5 +243,5 @@ function logEvent(msg) {
     log.innerHTML = `<div>> ${msg}</div>` + log.innerHTML;
 }
 
-// Initialize
+// Initialize ws connection when page loads
 connect();
