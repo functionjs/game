@@ -11,9 +11,8 @@ const    wss = new WebSocketServer({ server }); // WebSocket server for real-tim
         app.use(express.static('public')); // Serves your index.html
 
          // --- ROUTES ---
-         var playersNumber = 0;
-         var players = {};
-         
+var playersNumber = 0;
+var players = {};
          app.post('/register', 
                   //--------------------------------------------------------------------- 
                  // Endpoint for players to register their Bot code. Expects { email, name, code } in the request body. Validates code size and stores player info. 
@@ -26,23 +25,40 @@ const    wss = new WebSocketServer({ server }); // WebSocket server for real-tim
                                          return res.status(400).send(errmessage);    
                                  }
                                   
-                                  //else player registration is successful, store their info in the players object
-                                  let  idx= playersNumber;
-                                    playersNumber++;
-                                    
-                                         players[email] = { 
-                                                           idx,
-                                                           name, 
-                                                           code, 
-                                                           timeBank: CONFIG.baseTime, 
-                                                           score: 0,
-                                                           status: "READY"
-                                                         };
-                                         
-                                          broadcast({ type: "NEW_PLAYER", name });
-                                          console.log(`     Registered!  Total players: ${playersNumber}`);
-                                          res.send("Registered!");
-                                }
+                                  //else
+                                   if(!players[email]){ // new player 
+                                          // Try to compile the Bot code in virtual machine to catch syntax errors before registration
+                                          const botCodeString=`result = (${code})(piles, forbidden, context)`
+                                           try {
+                                                 const  botScript = new vm.Script(botCodeString);               
+                                                  let  idx= playersNumber;
+                                                   playersNumber++;
+                                                    players[email] = { 
+                                                                      idx,
+                                                                      name, 
+                                                                      code, 
+                                                                      timeBank: CONFIG.baseTime, 
+                                                                      score: 0,
+                                                                      status: "READY"
+                                                                    };
+                                           }
+                                           catch  (err) {
+                                                          let errmessage = `Syntax error in Bot code for player: ${name} (${email}): ${err.message}`;
+                                                           console.log(errmessage);
+                                                            delete players[email]; // Remove player from registry if their code has syntax errors
+                                                             return res.status(400).send(errmessage);    
+                                           }         
+                                            
+                                             broadcast({ type: "NEW_PLAYER", name });
+                                             console.log(`     Registered!  Total players: ${playersNumber}`);
+                                             res.send("Registered!");
+                                   }   
+                                   else { // Duplicate email registration attempt
+                                          let errmessage = `Player with email ${email} is already registered.`;
+                                           console.log(errmessage);
+                                            res.status(400).send(errmessage);
+                                        }
+                                }        
         );
          
 // Start the server
@@ -64,6 +80,8 @@ let startTimeout = null; // To allow manual start before the scheduled time if n
 let matchMatrix = {}; // Stores results of matches for the matrix display
 // matchMatrix structure: { "emailA|emailB": { playerA, playerB, winsA, winsB, bonusA, bonusB } }
 
+const DEFAULT_START_DELAY_MS = 15 * 60 * 1000; // 15 minutes after server start
+
           wss.on('connection', 
              //---------------------------------------------------------------------            
             // When a new game-clients connects, send them the tournament start time if ready
@@ -72,8 +90,8 @@ let matchMatrix = {}; // Stores results of matches for the matrix display
                        let startTimeMessage = { type: "START_TIME", startTime: tournamentStartTime };
                         let startTimeString = JSON.stringify(startTimeMessage);
                          ws.send(startTimeString);
-                   }
-                   // Working with messages from clients, such as a request to start the tournament early           
+                        }
+                        // Working with messages from clients, such as a request to start the tournament early           
                    ws.on('message', 
                           //-------------------------------------------------------------------- 
                           message => {
@@ -88,7 +106,7 @@ let matchMatrix = {}; // Stores results of matches for the matrix display
                                                        clearTimeout(startTimeout);
                                                         startTimeout = null;
                                                    }
-                                                    startChampionship();// 
+                                                    startChampionship();// Main function to start the tournament, run matches, and broadcast results
                                                }
                                            }
                                          }
@@ -106,12 +124,11 @@ var CONFIG = {
                mode: "NORMAL", // "" or "GIVEAWAY"
                piles: [3, 5, 7], // Initial piles
                forbidden: [0], // Example: can't take 0 from any pile
-               baseTime: 1000,   // ms
+               baseTime: 10,   // ms
                maxCodeSize: 2048, // bytes
                numberOfGamesPerMatch: 10 // Number of games each pair of Bots will play against each other
 };
 
-const DEFAULT_START_DELAY_MS = 15 * 60 * 1000; // 15 minutes after server start
 
 
 // Store players data: { email: { idx, name, code, timeBank, score } }
@@ -121,6 +138,168 @@ const DEFAULT_START_DELAY_MS = 15 * 60 * 1000; // 15 minutes after server start
 // code  is their Bot js code (function play()),
 // timeBank tracks their remaining time, 
 // score tracks their points in the tournament.
+
+
+// --- TOURNAMENT LOGIC ---
+    async function 
+    startChampionship() {
+                         if (tournamentStarted) return;
+
+                         //else start the tournament
+                             tournamentStarted = true; // Set the tournamentStarted flag to prevent multiple starts
+                              if (startTimeout) {// If the tournament was started early by a client request, clear the scheduled start timeout to prevent it from firing later
+                                  clearTimeout(startTimeout);
+                                   startTimeout = null;
+                              }
+                               console.log("🤖🏆🤖 Championship Started!");
+                               
+                               // Create player list with indices
+                               const emails = Object.keys(players);
+                               const playerList = [];
+                                for (let i = 0; i < emails.length; i++) 
+                                     playerList.push({
+                                                      idx: players[emails[i]].idx,
+                                                      name: players[emails[i]].name,
+                                                      email: emails[i]
+                                                    });
+                               
+                               
+                               // Generate and send initial tournament Matrix
+                               generateInitialMatrix();
+                                broadcast({ type: "TOURNAMENT_STARTED", players: playerList, matchMatrix: Matrix });
+                               
+                                // Run a round-robin tournament where each Bot plays against every other Bot
+                                for (let i = 0; i < playersNumber; i++) {
+                                    for (let j = i + 1; j < playersNumber; j++) {
+                                         await runMatch(emails[i], emails[j]);
+                                    }
+                               }
+                                
+                                console.log("🤖🌟🤖 Championship Ended! ");
+                                getMatchMatrixDisplay()
+                                 console.log("Results:", Matrix);
+                                 broadcast({ type: "END", players, matchMatrix: Matrix });// After all matches are done, broadcast the final results to the dashboard
+                                  tournamentStarted = false;
+    }
+            
+
+        async function 
+        runMatch(emailA, emailB) { // Run a match of numberOfGamesPerMatch (default: 10) games between two Bots, alternating who goes first, and applying the time carry-over logic based on the tournament mode
+                                      function opponentEmail(PlayerEmail){ return  (PlayerEmail === emailA) ? emailB : emailA;}
+                                  const N = CONFIG.numberOfGamesPerMatch;
+                                  setOfMatches:
+                                   for (let game = 1; game <= N; game++) {
+                                        let currentFirstPlayerEmail = (game % 2 === 1) ? emailA : emailB; // Alternate who goes first each game
+                                         let botA = players[currentFirstPlayerEmail];
+                                         let opponentPlayerEmail = opponentEmail(currentFirstPlayerEmail);
+                                          let botB = players[opponentPlayerEmail];
+                                          console.log(`Match ${game}/${N} between ${currentFirstPlayerEmail} and ${opponentPlayerEmail}`); 
+
+                                         let state = { piles: [...CONFIG.piles], turn: currentFirstPlayerEmail};
+                                           broadcast({ type: "CURRENT_FIGHT", fight: { playerA: botA.name, playerB: botB.name, game, totalGames: N } });
+        
+                                          // Main game loop for steps of a single game between two Bots while there are still valid moves to be made (not Game Over)
+                                         let currentPlayer; 
+                                         let  opponentPlayer = players[currentFirstPlayerEmail];
+                                          while (!isGameOver(state.piles)) {
+                                                    currentPlayer = opponentPlayer; 
+                                                     opponentPlayerEmail = opponentEmail(opponentPlayerEmail);
+                                                      opponentPlayer = players[opponentPlayerEmail];
+                                                   //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                                                   let report = runBotSafe(currentPlayer, state.piles);
+                                                   //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                                                    let move = report.result;
+                                                    if (report.error) {
+                                                         console.log(`${currentPlayer.name} made Error :`,report.error);
+                                                         broadcast({ type: "DISQUALIFIED_FOR_ERROR", error: report.error, player: currentPlayer.name  });
+                                                          currentPlayer.score -= 10;
+                                                          currentPlayer.timeBank = 0; // Disqualified player loses all remaining time
+                                                          opponentPlayer.score += 1;
+                                                          recordMatchResult(emailA, emailB, opponentEmail(state.turn), 0);
+                                                           getMatchMatrixDisplay();
+                                                            broadcast({ type: "MATCH_UPDATE", players, matchMatrix: Matrix });
+                                                            continue setOfMatches; 
+                                                     }
+                                                      // Validate currentPlayer Move 
+                                                          if (!isValidMove(move, state.piles)) {
+                                                              console.log(`${currentPlayer.name}(${state.turn}) try to do invalid move:`,move, " for piles: ", state.piles);
+                                                              broadcast({ type: "DISQUALIFIED_FOR_INVALID_MOVE", invalidMove: move, piles: state.piles, player: currentPlayer.name  });
+                                                               currentPlayer.score -= 10;
+                                                               currentPlayer.timeBank = 0; // Disqualified player loses all remaining time
+                                                               opponentPlayer.score += 1;
+                                                               recordMatchResult(emailA, emailB, opponentEmail(state.turn), 0);
+                                                                getMatchMatrixDisplay();
+                                                                 broadcast({ type: "MATCH_UPDATE", players, matchMatrix: Matrix });
+                                                                continue setOfMatches; 
+                                                          }
+                                                               //Bonus time for making a valid quick move
+                                                               let bonusTime  = CONFIG.baseTime -  report.timeSpent
+                                                                currentPlayer.timeBank += bonusTime ; // Time carry-over logic: player gains back the baseTime minus the time they actually spent thinking. If they spend more than baseTime, they lose time from their timeBank, if they spend less, they gain some time. This encourages efficient code.
+                                                               
+
+                                                                // Apply Valid Move
+                                                                state.piles[move.pileIndex] -= move.count;
+                                                                 broadcast({ type: "MOVE", piles: state.piles, player: currentPlayer.name, bonus: bonusTime });
+                                                           
+                                                                  await new Promise(delayresolve => setTimeout(delayresolve, 500 /*ms*/)); // Slow down for dashboard viewers
+                                                     
+                                                     
+                                           }
+                                            // Determine Winner & Time Carry-over logic
+                                            let winnerEmail = (CONFIG.mode === "NORMAL") ? state.turn 
+                                                                                         : (state.turn === emailA ? emailB 
+                                                                                                                  : emailA);
+                                             winnerEmail =  opponentEmail(opponentPlayerEmail);  // for debugging                                                                                                                  
+                                             console.log(`Winner email : ${winnerEmail} `);                                                                                                                         
+                                             // console.log(currentPlayer)
+                                              console.log(`Winner of match : ${currentPlayer.name} `);                                                                                                                         
+                                             // console.log(players)
+                                             
+                                             currentPlayer.score += 1;
+                                              recordMatchResult(emailA, emailB, winnerEmail, 100);
+                                               getMatchMatrixDisplay();
+                                                broadcast({ type: "MATCH_UPDATE", players, matchMatrix: Matrix });
+
+                                              // Switch Turn
+                                                 //state.turn = opponentEmail(state.turn);
+
+                                                  
+                                   }// End loop of all games between emailA and emailB
+        }
+
+            // Bots (player) Code EXECUTION on current state (currentPiles) by the "Referee logics" 
+            function runBotSafe(player, currentPiles) {
+            
+                     const sandbox = { // Provide the Bot with a safe, read-only view of the game state
+                                      piles: [...currentPiles], // Provide a copy of the piles to prevent cheating
+                                      forbidden: CONFIG.forbidden,// Provide forbidden moves for bot's logic
+                                      context: { mode: CONFIG.mode, timeRemaining: player.timeBank } // Additional context for bots to make informed decisions
+                                     };
+            
+                     // Construct the code to execute the player's Bot play() function and capture its result 
+                     const botCodeString=`result = (${player.code})(piles, forbidden, context)`
+                     // Compile the Bot code in virtual machine 
+                      const  botScript = new vm.Script(botCodeString);
+                       try {
+                            //start time 
+                            const startTime = Date.now();  
+                             // Run with time limit
+                             vm.createContext(sandbox);// Create a new context for each execution to prevent state sharing
+                              // Run the Bot code with a timeout to prevent infinite loops or long execution times. The timeout is set to the player's remaining time bank. 
+                              botScript.runInContext(sandbox, { timeout: (+player.timeBank+CONFIG.baseTime) }); // Add baseTime to ensure Bots have at least some time to make a move even if their timeBank is low
+                               //end time
+                               const endTime = Date.now();
+                                const duration = endTime - startTime;
+                                 let report = { result: sandbox.result, timeSpent: duration }
+                                  return report; // contains the move = sandbox.result from the Bot's play() function
+                         }
+                     catch (err) {// If there's an error (syntax error, runtime error, timeout), we consider it an invalid move and disqualify the player for that match
+                                   let report = {result: {}, error: "ABUSER", detail: err.message }
+                                    return report; // move={} and error is "ABUSER" to indicate the Bot code is not compliant with the rules (syntax error, runtime error, or timeout)
+                                 }
+            }
+
+
 
 function recordMatchResult(emailA, emailB, winnerEmail, bonus) {
                            const key = [emailA, emailB].sort().join('|');
@@ -180,121 +359,9 @@ function getMatchMatrixDisplay() {
                                   
 }
 
-// Bots (player) Code EXECUTION on current state (currentPiles) by the "Referee logics" 
-function runBotSafe(player, currentPiles) {
-
-         const sandbox = { // Provide the Bot with a safe, read-only view of the game state
-                          piles: [...currentPiles], // Provide a copy of the piles to prevent cheating
-                          forbidden: CONFIG.forbidden,// Provide forbidden moves for bot's logic
-                          context: { mode: CONFIG.mode, timeRemaining: player.timeBank } // Additional context for bots to make informed decisions
-                         };
-
-         try {
-              // Construct the code to execute the player's Bot play() function and capture its result 
-              const botCodeString=`result = (${player.code})(piles, forbidden, context)`
-               // Compile the Bot code in virtual machine to catch syntax errors before execution 
-               const  botScript = new vm.Script(botCodeString);
-                //start time 
-                const startTime = Date.now();  
-                 // Run with time limit
-                 vm.createContext(sandbox);// Create a new context for each execution to prevent state sharing
-                  // Run the Bot code with a timeout to prevent infinite loops or long execution times. The timeout is set to the player's remaining time bank. 
-                  botScript.runInContext(sandbox, { timeout: player.timeBank });
-                   //end time
-                   const endTime = Date.now();
-                    const duration = endTime - startTime;
-                     player.timeBank -= duration; // Deduct time spent
-        
-                     return sandbox.result; // Return the move result from the Bot's play() function
-             }
-         catch (err) {// If there's an error (syntax error, runtime error, timeout), we consider it an invalid move and disqualify the player for that match
-                        return { error: "ABUSER", detail: err.message };
-                      }
-}
 
 
 
-// --- TOURNAMENT LOGIC ---
-async function 
-startChampionship() {
-                     if (tournamentStarted) return;
-                     //else start the tournament
-                         tournamentStarted = true;
-                          if (startTimeout) {// If the tournament was started early by a client request, clear the scheduled start timeout to prevent it from firing later
-                              clearTimeout(startTimeout);
-                               startTimeout = null;
-                          }
-                           console.log("🤖🏆🤖 Championship Started!");
-                           
-                           // Create player list with indices
-                           const emails = Object.keys(players);
-                           const playerList = [];
-                            for (let i = 0; i < emails.length; i++) 
-                                 playerList.push({
-                                                  idx: players[emails[i]].idx,
-                                                  name: players[emails[i]].name,
-                                                  email: emails[i]
-                                                });
-                           
-                           
-                           // Generate and send initial matrix
-                           generateInitialMatrix();
-                            broadcast({ type: "TOURNAMENT_STARTED", players: playerList, matchMatrix: Matrix });
-                           
-                            // Run a round-robin tournament where each Bot plays against every other Bot
-                            for (let i = 0; i < playersNumber; i++) {
-                                for (let j = i + 1; j < playersNumber; j++) {
-                                     await runMatch(emails[i], emails[j]);
-                                }
-                           }
-                            
-                            console.log("🤖🌟🤖 Championship Ended! ");
-                            getMatchMatrixDisplay()
-                             console.log("Results:", Matrix);
-                             broadcast({ type: "END", players, matchMatrix: Matrix });// After all matches are done, broadcast the final results to the dashboard
-}
-
-    async function 
-    runMatch(emailA, emailB) { // Run a match of numberOfGamesPerMatch (default: 10) games between two Bots, alternating who goes first, and applying the time carry-over logic based on the tournament mode
-                              let botA = players[emailA];
-                              let botB = players[emailB];
-                              const N = CONFIG.numberOfGamesPerMatch;
-                               for (let game = 1; game <= N; game++) {
-                                    let currentFirstPlayer = (game % 2 === 1) ? emailA : emailB; // Alternate who goes first each game
-                                     let state = { piles: [...CONFIG.piles], turn: currentFirstPlayer};
-                                      broadcast({ type: "CURRENT_FIGHT", fight: { playerA: botA.name, playerB: botB.name, game, totalGames: N } });
-    
-                                      // Main game loop for a single game between two Bots while there are still valid moves to be made (not Game Over)
-                                      while (!isGameOver(state.piles)) {
-                                              let currentPlayer = players[state.turn];
-                                               let move = runBotSafe(currentPlayer, state.piles);
-                                                // Validate currentPlayer Move 
-                                                if (move.error || !isValidMove(move, state.piles)) {
-                                                    console.log(`${currentPlayer.name}(${state.turn}) disqualified for invalid move:`,move, " for piles: ", state.piles);
-                                                    broadcast({ type: "DISQUALIFIED_FOR_INVALID_MOVE", piles: state.piles, player: currentPlayer.name });
-                                                     currentPlayer.score -= 10;
-                                                      break; 
-                                                }
-                                                 // Apply Valid Move
-                                                 state.piles[move.pileIndex] -= move.count;
-                                                  broadcast({ type: "MOVE", piles: state.piles, player: currentPlayer.name });
-                                          
-                                                  // Switch Turn
-                                                  state.turn = (state.turn === emailA ? emailB : emailA);
-                                                   await new Promise(delayresolve => setTimeout(delayresolve, 500 /*ms*/)); // Slow down for dashboard viewers
-                                      }
-                                  
-                                        // Determine Winner & Time Carry-over logic
-                                        let winnerEmail = (CONFIG.mode === "NORMAL") ? state.turn 
-                                                                                     : (state.turn === emailA ? emailB 
-                                                                                                              : emailA);
-                                         players[winnerEmail].score += 1;
-                                         players[winnerEmail].timeBank += 100; // Small bonus for winning
-                                          recordMatchResult(emailA, emailB, winnerEmail, 100);
-                                           getMatchMatrixDisplay();
-                                            broadcast({ type: "MATCH_UPDATE", players, matchMatrix: Matrix });
-                               }// End loop of all games between emailA and emailB
-    }
 
 // --- HELPER FUNCTIONS ---
 function isValidMove(move, piles) {

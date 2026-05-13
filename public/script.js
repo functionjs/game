@@ -29,10 +29,10 @@ function connect() {
 
 async function register() {
                             const payload = {
-                                email: document.getElementById('email').value,
-                                name: document.getElementById('avatar-name').value,
-                                code: document.getElementById('bot-code').value
-                            };
+                                             email: document.getElementById('email').value,
+                                             name:  document.getElementById('avatar-name').value,
+                                             code:  document.getElementById('bot-code').value
+                                            };
 
                              const response = await fetch('/register', {
                                                                          method: 'POST',
@@ -44,88 +44,95 @@ async function register() {
                                                 regView.classList.add('hidden');
                                                 dashView.classList.remove('hidden');
                                                }
-                              else    alert("Registration failed. Check your code size!");
+                              else    alert(`Registration failed. ${await response.text()}`);
                                    
 }
 
-// 3. Handle incoming Game Events
-function handleServerEvent(data) {
-    if (data.type === "START_TIME") {
-        setDeadline(data.startTime);
-        return;
-    }
-
-    if (data.type === "TOURNAMENT_STARTED") {
-        playerList = data.players;
-         playerCount = playerList.length;
-         console.log("Tournament started! Players:", playerList);
-        matchMatrix = data.matchMatrix;
-         console.log("Initial matrix:", matchMatrix);
-         renderMatchMatrix(matchMatrix, playerList);
-          if (deadlineText) {
-              deadlineText.innerText = "Contest starting now!";
-          }
-           beginContest();
-            return;
-    }
-
-    if (data.type === "CURRENT_FIGHT") {
-        if (currentFightText) {
-            currentFightText.innerText = `Current fight: ${data.fight.playerA} vs ${data.fight.playerB} — round ${data.fight.game}/${data.fight.totalGames}`;
-        }
-        logEvent(`Current fight: ${data.fight.playerA} vs ${data.fight.playerB}`);
-        return;
-    }
-
-    if (data.type === "MATCH_UPDATE") {
-                                        updateLeaderboard(data);
-                                         return;
+    // 3. Handle incoming Game Events
+    function handleServerEvent(data) {
+                                      if (data.type === "START_TIME") {
+                                                                       setDeadline(data.startTime);
+                                                                        return;
                                       }
-
-    if (data.type === "MOVE") {
-        updatePiles(data.piles);
-         logEvent(`${data.player} made a move to state: ${data.piles}`);
-    }
     
-    if (data.type === "NEW_PLAYER") {
-        logEvent(`New Challenger: ${data.name} has joined!`);
+                                          if (data.type === "TOURNAMENT_STARTED") {
+                                                                                    playerList = data.players;
+                                                                                     playerCount = playerList.length;
+                                                                                     //console.log("Tournament started! Players:", playerList);
+                                                                                    matchMatrix = data.matchMatrix;
+                                                                                     //console.log("Initial matrix:", matchMatrix);
+                                                                                     renderMatchMatrix(matchMatrix, playerList);
+                                                                                      if (deadlineText) 
+                                                                                          deadlineText.innerText = "Contest starting now!";
+                                                                                      
+                                                                                       beginContest();
+                                          }
+                                      
+                                          if (data.type === "CURRENT_FIGHT") {
+                                                                              if (currentFightText) 
+                                                                                  currentFightText.innerText = `Current fight: ${data.fight.playerA} vs ${data.fight.playerB} — round ${data.fight.game} of ${data.fight.totalGames}`;
+                                                                              
+                                                                              logEvent(`Current fight: ${data.fight.playerA} vs ${data.fight.playerB}`);
+                                          }
+                                      
+                                          if (data.type === "MATCH_UPDATE") {
+                                                                              updateLeaderboard(data);
+                                                                            }
+                                      
+                                          if (data.type === "MOVE") {
+                                                                     updatePiles(data.piles);
+                                                                     logEvent(`${data.player} moves to state: ${data.piles}, bonus time: ${data.bonus}ms`);
+                                          } 
+                                          if (data.type === "DISQUALIFIED_FOR_INVALID_MOVE") {
+                                                                     updatePiles(data.piles);
+                                                                     logEvent(`${data.player} tried to make an invalid move ${data.invalidMove} and is looser!`);
+                                          } 
+
+                                          if (data.type === "DISQUALIFIED_FOR_ERROR") {
+                                                                     //updatePiles(data.piles);
+                                                                     logEvent(`${data.player}  made error: ${data.error} while trying to make move  and is looser!`);
+                                          } 
+                                          
+                                          if (data.type === "NEW_PLAYER") {
+                                                                            logEvent(`New Challenger: ${data.name} has joined!`);
+                                          }
+                                      
+                                          if (data.type === "END") {
+                                                                     updateLeaderboard(data)
+                                                                     logEvent("🏆 TOURNAMENT OVER!");
+                                          }
+                                           return
     }
 
-    if (data.type === "END") {
-        updateLeaderboard(data)
-         logEvent("🏆 TOURNAMENT OVER!");
-    }
-}
 var countdownInterval=null;
 function setDeadline(startTimeValue) {
-    deadlineStartTime = new Date(startTimeValue);
-    if (countdownInterval) {
-        clearInterval(countdownInterval);
-    }
-    updateDeadlineTimer();
-    countdownInterval = setInterval(updateDeadlineTimer, 1000);
+                                      deadlineStartTime = new Date(startTimeValue);
+                                       if (countdownInterval)clearInterval(countdownInterval);
+                                       
+                                        updateDeadlineTimer();
+                                         countdownInterval = setInterval(updateDeadlineTimer, 1000);
 }
 
-function updateDeadlineTimer() {
-    if (!deadlineStartTime) return;
-
-    const msLeft = deadlineStartTime - Date.now();
-    if (msLeft <= 0) {
-        if (deadlineText) {
-            deadlineText.innerText = "Contest starting now!";
-        }
-        clearInterval(countdownInterval);
-        countdownInterval = null;
-        beginContest();
-        return;
+    function updateDeadlineTimer() {
+                                    if (!deadlineStartTime) return;
+                                
+                                        const msLeft = deadlineStartTime - Date.now();
+                                         if (msLeft <= 0) {
+                                             if (deadlineText) {
+                                                 deadlineText.innerText = "Contest starting now!";
+                                             }
+                                              clearInterval(countdownInterval);
+                                               countdownInterval = null;
+                                                beginContest();
+                                                 return;
+                                         }
+                                
+                                              const minutes = String(Math.floor(msLeft / 60000)).padStart(2, '0');
+                                              const seconds = String(Math.floor((msLeft % 60000) / 1000)).padStart(2, '0');
+                                               if (deadlineText) 
+                                                   deadlineText.innerText = `Tournament starts in ${minutes}:${seconds}`;
+                                               
     }
-
-    const minutes = String(Math.floor(msLeft / 60000)).padStart(2, '0');
-    const seconds = String(Math.floor((msLeft % 60000) / 1000)).padStart(2, '0');
-    if (deadlineText) {
-        deadlineText.innerText = `Tournament starts in ${minutes}:${seconds}`;
-    }
-}
       //----------for early contest start -----------------------------------------------------
       let consecutiveLogoEnters = 0;
       function handleLogoHover() {
@@ -135,23 +142,26 @@ function updateDeadlineTimer() {
                                          logEvent("🧠 Easter egg activated: requesting early tournament start!");
                                          if (ws && ws.readyState === WebSocket.OPEN) {
                                              ws.send(JSON.stringify({ type: "START_TOURNAMENT_REQUEST" }));
+                                              beginContest();
                                          }
-                                          beginContest();
+                                         else {
+                                               logEvent("❌ Failed to request early tournament start.");
+                                         }
                                    }
       }                         
 logo.addEventListener('mouseenter', handleLogoHover);
 
 function beginContest() {
     if (countdownInterval) {
-        clearInterval(countdownInterval);
-        countdownInterval = null;
-    }
+                            clearInterval(countdownInterval);
+                             countdownInterval = null;
+    } 
     if (regView && dashView) {
-        regView.classList.add('hidden');
-        dashView.classList.remove('hidden');
+                               regView.classList.add('hidden');
+                               dashView.classList.remove('hidden');
     }
     if (deadlineText) {
-        deadlineText.innerText = "Contest starting now!";
+                       deadlineText.innerText = "Contest starting now!";
     }
     logEvent("🏁 Contest begins!");
 }
@@ -170,29 +180,23 @@ function updatePiles(piles) {
 }
 
     function updateLeaderboard(data) {
-                                      let players = ;
+                                      let players = data.players;
                                       let matrix  = data.matchMatrix;
                                            updatePlayersList(data.players)
                                            renderMatchMatrix(data.matchMatrix, data.players);
-                                       
     }
         function updatePlayersList(players) {
-                                       //renderPlayerList(players);
-                                        const body = document.getElementById('leaderboard-body');
-                                         body.innerHTML = '';
-                                          Object.values(players)
-                                           .sort((a,b) => b.score - a.score)
-                                            .forEach(p => {
-                                                           body.innerHTML += `<tr><td>${p.name}</td><td>${p.score}</td><td>${p.timeBank}ms</td></tr>`;
-                                                          }
-                                                    );
+                                             const body = document.getElementById('leaderboard-body');
+                                              body.innerHTML = '';
+                                               Object.values(players)
+                                                .sort((a,b) => b.score - a.score)
+                                                 .forEach(p => {
+                                                                //console.log("Updating leaderboard with player:", p); 
+                                                                body.innerHTML += `<tr><td>${p.name}</td><td>${p.score}</td><td>${p.timeBank}ms</td></tr>`;
+                                                               }
+                                                         );
         }
-            function renderPlayerList(players) {
-                                                 if (!playerList) return;
-    
-                                                     const names = Object.values(players).map(p => p.name);
-                                                      playerList.innerText = `Contestants: ${names.join(' • ')}`;
-            }
+
         function renderMatchMatrix(matrixEntries, players) {
                                                             if (matchMatrixTable.innerHTML.trim() == "") generateMatchMatrixTable(players);
 

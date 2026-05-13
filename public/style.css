@@ -1,14 +1,20 @@
 @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;700&display=swap');
 
 body {
-    background-color: #1a1a2e;
-    color: #e2e2e2;
-    font-family: 'Segoe UI', sans-serif;
-    margin: 0;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+     background-color: #1a1a2e;
+    /* This creates a 50% dark overlay over your image */
+     background-image: linear-gradient(rgba(0, 0, 50, 0.98), rgba(0, 0, 100, 0.95)), url('studentbot.png');
+    /* Standard full-page background settings */
+     background-size: cover;
+     background-position: center;
+     background-attachment: fixed;
+     color: #e2e2e2;
+     font-family: 'Segoe UI', sans-serif;
+     margin: 0;
+     padding: 20px;
+     display: flex;
+     flex-direction: column;
+     align-items: center;
 }
 
 .card {
@@ -36,7 +42,7 @@ input {
 textarea {
     width: 100%;
     height: 200px;
-    background: linear-gradient(rgb(0, 0, 128), rgb(0, 0, 48)); 
+    background: linear-gradient(rgba(0, 0, 128,0.5), rgba(0, 0, 48, 0.5)); 
     color: #00ffcc;
     font-family: monospace;
     border: none;
@@ -97,7 +103,7 @@ button {
 
 .matrix-container {
     margin-top: 16px;
-    overflow-x: auto;
+    overflow-x: visible;
     border: 1px solid rgba(255,255,255,0.1);
     border-radius: 12px;
     padding: 10px;
@@ -107,7 +113,7 @@ button {
 #match-matrix {
     width: 100%;
     border-collapse: collapse;
-    min-width: 600px;
+    min-width: 200px;
 }
 
 #match-matrix {
@@ -123,14 +129,14 @@ button {
 /* Dashboard Layout */
 .game-container {
     display: grid;
-    grid-template-columns: 2.3fr 1.4fr;
-    gap: 20px;
+    grid-template-columns: 2fr 2fr;
+    gap: 10px;
     width: 100%;
     max-width: 1200px;
 }
 
 .leaderboard {
-    max-height: calc(200vh - 180px);
+    max-height: calc(400vh - 180px);
     overflow-y: auto;
 }
 
@@ -142,11 +148,11 @@ button {
 }
 
 #game-log {
-    height: 100px;
+    height: 200px;
     overflow-y: auto;
     background: rgba(0,0,0,0.2);
     padding: 10px;
     font-size: 0.9rem;
 }
 
-.pile { display: flex; flex-direction: column; align-items: center; }
+.pile { display: flex; flex-direction: row; align-items: center; }
