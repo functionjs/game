@@ -123,12 +123,31 @@ const DEFAULT_START_DELAY_MS = 15 * 60 * 1000; // 15 minutes after server start
 var CONFIG = {
                mode: "NORMAL", // "" or "GIVEAWAY"
                piles: [3, 5, 7], // Initial piles
-               forbidden: [0], // Example: can't take 0 from any pile
+               forbidden: [3, 5], // Example: can't take 3 or 5 from any pile
                baseTime: 10,   // ms
-               maxCodeSize: 2048, // bytes
+               maxCodeSize: 4096, // bytes
                numberOfGamesPerMatch: 10 // Number of games each pair of Bots will play against each other
 };
+Math.random = mulberry32(12345);// Seeded random number generator for reproducibility of pile configurations and forbidden moves across tournaments
+   function resetConfigPiles(accountsNumber) {
+                                 //let accountsNumber = Math.floor(Math.random() * 5) + 3; // Random number of accounts between 3 and 7
+                                  let piles = []; 
+                                     for (let i = 0; i < accountsNumber; i++) {
+                                         piles.push(Math.floor(Math.random() * 10) + 1); // Random number of coins between 1 and 10
+                                     }
+                                      CONFIG.piles  = piles ;   
+   }
 
+    function resetConfigForbiddenMoves() {
+         let maxTake = Math.max(...CONFIG.piles); // The maximum number of coins that can be taken in one move is the size of the largest pile
+          let forbiddenMovesCount = Math.floor(maxTake/4) + 1; // 
+           for(let i=0; i<forbiddenMovesCount; i++){
+               let move = Math.floor(Math.random() * maxTake) + 1; // Random forbidden move between 1 and maxTake
+                if(!CONFIG.forbidden.includes(move)){
+                    CONFIG.forbidden.push(move);
+                }
+           }
+    }
 
 
 // Store players data: { email: { idx, name, code, timeBank, score } }
@@ -145,13 +164,16 @@ var CONFIG = {
     startChampionship() {
                          if (tournamentStarted) return;
 
+                         //resetConfigPiles()
+                          //resetConfigForbiddenMoves() 
+
                          //else start the tournament
                              tournamentStarted = true; // Set the tournamentStarted flag to prevent multiple starts
                               if (startTimeout) {// If the tournament was started early by a client request, clear the scheduled start timeout to prevent it from firing later
                                   clearTimeout(startTimeout);
                                    startTimeout = null;
                               }
-                               console.log("🤖🏆🤖 Championship Started!");
+                               console.log("🤡🏆🤖 Championship Started!");
                                
                                // Create player list with indices
                                const emails = Object.keys(players);
@@ -166,7 +188,7 @@ var CONFIG = {
                                
                                // Generate and send initial tournament Matrix
                                generateInitialMatrix();
-                                broadcast({ type: "TOURNAMENT_STARTED", players: playerList, matchMatrix: Matrix });
+                                broadcast({ type: "TOURNAMENT_STARTED", players: playerList, matchMatrix: Matrix, config: CONFIG });
                                
                                 // Run a round-robin tournament where each Bot plays against every other Bot
                                 for (let i = 0; i < playersNumber; i++) {
@@ -175,7 +197,7 @@ var CONFIG = {
                                     }
                                }
                                 
-                                console.log("🤖🌟🤖 Championship Ended! ");
+                                console.log("🤖🌟🤡 Championship Ended! ");
                                 getMatchMatrixDisplay()
                                  console.log("Results:", Matrix);
                                  broadcast({ type: "END", players, matchMatrix: Matrix });// After all matches are done, broadcast the final results to the dashboard
@@ -189,6 +211,7 @@ var CONFIG = {
                                   const N = CONFIG.numberOfGamesPerMatch;
                                   setOfMatches:
                                    for (let game = 1; game <= N; game++) {
+                                        if(game%2===0)resetConfigPiles(game);
                                         let currentFirstPlayerEmail = (game % 2 === 1) ? emailA : emailB; // Alternate who goes first each game
                                          let botA = players[currentFirstPlayerEmail];
                                          let opponentPlayerEmail = opponentEmail(currentFirstPlayerEmail);
@@ -196,7 +219,7 @@ var CONFIG = {
                                           console.log(`Match ${game}/${N} between ${currentFirstPlayerEmail} and ${opponentPlayerEmail}`); 
 
                                          let state = { piles: [...CONFIG.piles], turn: currentFirstPlayerEmail};
-                                           broadcast({ type: "CURRENT_FIGHT", fight: { playerA: botA.name, playerB: botB.name, game, totalGames: N } });
+                                           broadcast({ type: "CURRENT_FIGHT", fight: { playerA: botA.name, playerB: botB.name, game, totalGames: N }, config: CONFIG });
         
                                           // Main game loop for steps of a single game between two Bots while there are still valid moves to be made (not Game Over)
                                          let currentPlayer; 
@@ -212,7 +235,7 @@ var CONFIG = {
                                                     if (report.error) {
                                                          console.log(`${currentPlayer.name} made Error :`,report.error);
                                                          broadcast({ type: "DISQUALIFIED_FOR_ERROR", error: report.error, player: currentPlayer.name  });
-                                                          currentPlayer.score -= 10;
+                                                          //currentPlayer.score -= 10;
                                                           currentPlayer.timeBank = 0; // Disqualified player loses all remaining time
                                                           opponentPlayer.score += 1;
                                                           recordMatchResult(emailA, emailB, opponentEmail(state.turn), 0);
@@ -224,7 +247,7 @@ var CONFIG = {
                                                           if (!isValidMove(move, state.piles)) {
                                                               console.log(`${currentPlayer.name}(${state.turn}) try to do invalid move:`,move, " for piles: ", state.piles);
                                                               broadcast({ type: "DISQUALIFIED_FOR_INVALID_MOVE", invalidMove: move, piles: state.piles, player: currentPlayer.name  });
-                                                               currentPlayer.score -= 10;
+                                                              // currentPlayer.score -= 10;
                                                                currentPlayer.timeBank = 0; // Disqualified player loses all remaining time
                                                                opponentPlayer.score += 1;
                                                                recordMatchResult(emailA, emailB, opponentEmail(state.turn), 0);
@@ -239,29 +262,23 @@ var CONFIG = {
 
                                                                 // Apply Valid Move
                                                                 state.piles[move.pileIndex] -= move.count;
-                                                                 broadcast({ type: "MOVE", piles: state.piles, player: currentPlayer.name, bonus: bonusTime });
-                                                           
-                                                                  await new Promise(delayresolve => setTimeout(delayresolve, 500 /*ms*/)); // Slow down for dashboard viewers
+                                                                 broadcast({ type: "MOVE", piles: state.piles, player: currentPlayer.name, bonus: bonusTime, movedFrom: move.pileIndex });
+                                                                 await delay(100);
+                                                                  //await new Promise(delayresolve => setTimeout(delayresolve, 500 /*ms*/)); // Slow down for dashboard viewers
                                                      
                                                      
                                            }
                                             // Determine Winner & Time Carry-over logic
-                                            let winnerEmail = (CONFIG.mode === "NORMAL") ? state.turn 
-                                                                                         : (state.turn === emailA ? emailB 
-                                                                                                                  : emailA);
-                                             winnerEmail =  opponentEmail(opponentPlayerEmail);  // for debugging                                                                                                                  
+                                            //if(CONFIG.mode === "NORMAL")                             
+                                            let  winnerEmail =  opponentEmail(opponentPlayerEmail);  // after normal exit from while loop  in NORMAL game the opponent of  the opponent is winner
                                              console.log(`Winner email : ${winnerEmail} `);                                                                                                                         
-                                             // console.log(currentPlayer)
                                               console.log(`Winner of match : ${currentPlayer.name} `);                                                                                                                         
-                                             // console.log(players)
-                                             
                                              currentPlayer.score += 1;
-                                              recordMatchResult(emailA, emailB, winnerEmail, 100);
+                                             opponentPlayer.timeBank = 0; // The loser of the match loses all remaining time for the next matches, while the winner keeps their remaining time as carry-over for their next matches. This rewards players who win quickly and penalizes those who lose or play inefficiently.
+                                              recordMatchResult(emailA, emailB, winnerEmail, 0);
                                                getMatchMatrixDisplay();
                                                 broadcast({ type: "MATCH_UPDATE", players, matchMatrix: Matrix });
-
-                                              // Switch Turn
-                                                 //state.turn = opponentEmail(state.turn);
+                                                 await delay(2000);
 
                                                   
                                    }// End loop of all games between emailA and emailB
@@ -299,101 +316,110 @@ var CONFIG = {
                                  }
             }
 
+            function recordMatchResult(emailA, emailB, winnerEmail, bonus) {
+                                       const key = [emailA, emailB].sort().join('|');
+                                       // matchMatrix structure: { "emailA|emailB": { playerA, playerB, winsA, winsB, bonusA, bonusB } }
+                                        if (!matchMatrix[key]) 
+                                             matchMatrix[key] = {
+                                                                 playerA: emailA,
+                                                                 playerB: emailB,
+                                                                 winsA: 0,
+                                                                 winsB: 0,
+                                                                 bonusA: 0,
+                                                                 bonusB: 0
+                                                                };
+                                         
+                                   
+                                         let row = matchMatrix[key]; // find the correct row for the match of emailA against emailB, regardless of player order
+                                          if (winnerEmail === emailA) {
+                                                                       row.winsA += 1;
+                                                                       row.bonusA += bonus;
+                                                                      }
+                                           else {// winner is emailB
+                                                                       row.winsB += 1;
+                                                                       row.bonusB += bonus;
+                                                }
+            }     
 
-
-function recordMatchResult(emailA, emailB, winnerEmail, bonus) {
-                           const key = [emailA, emailB].sort().join('|');
-                           // matchMatrix structure: { "emailA|emailB": { playerA, playerB, winsA, winsB, bonusA, bonusB } }
-                            if (!matchMatrix[key]) 
-                                 matchMatrix[key] = {
-                                                     playerA: emailA,
-                                                     playerB: emailB,
-                                                     winsA: 0,
-                                                     winsB: 0,
-                                                     bonusA: 0,
-                                                     bonusB: 0
-                                                    };
-                             
-                       
-                             let row = matchMatrix[key]; // find the correct row for the match of emailA against emailB, regardless of player order
-                              if (winnerEmail === emailA) {
-                                                           row.winsA += 1;
-                                                           row.bonusA += bonus;
-                                                          }
-                               else {// winner is emailB
-                                                           row.winsB += 1;
-                                                           row.bonusB += bonus;
-                                    }
-}                       
+// tournament matrix to store and display the results of matches in a structured way for the dashboard. The matrix is indexed by player indices and contains the number of wins and bonus points for each player against every other player. This allows the dashboard to easily display a comprehensive view of the tournament results.                              
 var Matrix = [];
-// Generate initial tournament matrix
-function generateInitialMatrix() {
-                                  for (let i = 0; i < playersNumber; i++) {
-                                    Matrix[i] = [];
-                                    for (let j = 0; j < playersNumber; j++) 
-                                        Matrix[i][j] = { winsA: 0, winsB: 0, bonusA: 0, bonusB: 0 };
-                                 }
-}
-function getMatchMatrixDisplay() {
-                                  // Fill matrix with match results using player indices
-                                  for (let key in matchMatrix) {
-                                       let row = matchMatrix[key];
-                                       let idxA = players[row.playerA].idx;
-                                       let idxB = players[row.playerB].idx;
-                                      
-                                        Matrix[idxA][idxB] = {
-                                                              winsA: row.winsA,
-                                                              winsB: row.winsB,
-                                                              bonusA: row.bonusA,
-                                                              bonusB: row.bonusB
-                                                            };
-                                 
-                                       Matrix[idxB][idxA] = {
-                                                             winsA: row.winsB,
-                                                             winsB: row.winsA,
-                                                             bonusA: row.bonusB,
-                                                             bonusB: row.bonusA
-                                                            };
-                                  }
-                                   return Matrix;
-                                  
-}
-
-
-
+            // Generate initial tournament matrix
+            function generateInitialMatrix() {
+                                              for (let i = 0; i < playersNumber; i++) {
+                                                Matrix[i] = [];
+                                                for (let j = 0; j < playersNumber; j++) 
+                                                    Matrix[i][j] = { winsA: 0, winsB: 0, bonusA: 0, bonusB: 0 };
+                                             }
+            }
+            function getMatchMatrixDisplay() {
+                                              // Fill matrix with match results using player indices
+                                              for (let key in matchMatrix) {
+                                                   let row = matchMatrix[key];
+                                                   let idxA = players[row.playerA].idx;
+                                                   let idxB = players[row.playerB].idx;
+                                                  
+                                                    Matrix[idxA][idxB] = {
+                                                                          winsA: row.winsA,
+                                                                          winsB: row.winsB,
+                                                                          bonusA: row.bonusA,
+                                                                          bonusB: row.bonusB
+                                                                        };
+                                             
+                                                   Matrix[idxB][idxA] = {
+                                                                         winsA: row.winsB,
+                                                                         winsB: row.winsA,
+                                                                         bonusA: row.bonusB,
+                                                                         bonusB: row.bonusA
+                                                                        };
+                                              }
+                                               return Matrix;
+                                              
+            }
 
 
 // --- HELPER FUNCTIONS ---
-function isValidMove(move, piles) {
-                                    if (!move || move.pileIndex === undefined) return false; // move must exists and specify a existing pile index
-                                    if (CONFIG.forbidden.includes(move.count)) return false; // Check if the move count is in the forbidden list
-                                    // negative moves forbidden and gamer must take at least 1 from a pile, and cannot take more than what's available in the chosen pile
-                                    if (move.count <= 0 || move.count > piles[move.pileIndex]) return false;
+                function isValidMove(move, piles) {
+                                                    if (!move || move.pileIndex === undefined) return false; // move must exists and specify a existing pile index
+                                                    if (CONFIG.forbidden.includes(move.count)) return false; // Check if the move count is in the forbidden list
+                                                    // negative moves forbidden and gamer must take at least 1 from a pile, and cannot take more than what's available in the chosen pile
+                                                    if (move.count <= 0 || move.count > piles[move.pileIndex]) return false;
+                
+                                                    // else move is valid if it passes all checks
+                                                       return true;
+                }
+                
+                function isGameOver(piles) {
+                                            // Game is over if all piles are empty (a player took the last item) or if there are no valid moves left for the next player (all remaining moves are forbidden)
+                                            return piles.every(p => p === 0) || getAvailableMoves(piles).length === 0;
+                }
+                
+                function getAvailableMoves(piles) {
+                                                    // Used by the "Ideal Opponent" or to check if a bot is stuck
+                                                   let moves = [];
+                                                   for (let idx = 0; idx < piles.length; idx++) {
+                                                       for (let i = 1; i <= piles[idx]; i++) {
+                                                           if (!CONFIG.forbidden.includes(i)) {
+                                                               moves.push({pileIndex: idx, count: i});
+                                                           }
+                                                       }
+                                                   }
+                                                     return moves;
+                }
+                
+                function broadcast(data) {
+                                          wss.clients.forEach(client => client.send(JSON.stringify(data)));
+                }
+                async function delay(time) {
+                                            await new Promise(delayresolve => setTimeout(delayresolve, time /*ms*/)); // Slow down for dashboard viewers
+                } 
+                function mulberry32(seed) {
+                                            return function () {
+                                                                let t = seed += 0x6D2B79F5;
+                                                                 t = Math.imul(t ^ (t >>> 15), t | 1);
+                                                                  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+                                                                   return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+                                            };
+                }
 
-                                    // else move is valid if it passes all checks
-                                       return true;
-}
-
-function isGameOver(piles) {
-                            // Game is over if all piles are empty (a player took the last item) or if there are no valid moves left for the next player (all remaining moves are forbidden)
-                            return piles.every(p => p === 0) || getAvailableMoves(piles).length === 0;
-}
-
-function getAvailableMoves(piles) {
-                                    // Used by the "Ideal Opponent" or to check if a bot is stuck
-                                   let moves = [];
-                                   for (let idx = 0; idx < piles.length; idx++) {
-                                       for (let i = 1; i <= piles[idx]; i++) {
-                                           if (!CONFIG.forbidden.includes(i)) {
-                                               moves.push({pileIndex: idx, count: i});
-                                           }
-                                       }
-                                   }
-                                     return moves;
-}
-
-function broadcast(data) {
-                          wss.clients.forEach(client => client.send(JSON.stringify(data)));
-}
 
 

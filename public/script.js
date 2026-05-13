@@ -48,6 +48,7 @@ async function register() {
                                    
 }
 
+var currenConfig = null;
     // 3. Handle incoming Game Events
     function handleServerEvent(data) {
                                       if (data.type === "START_TIME") {
@@ -65,10 +66,14 @@ async function register() {
                                                                                       if (deadlineText) 
                                                                                           deadlineText.innerText = "Contest starting now!";
                                                                                       
+                                                                                      data.config && logEvent(`Tournament configuration: ${JSON.stringify(data.config)}`);
+                                                                                      currenConfig = data.config;
+
                                                                                        beginContest();
                                           }
                                       
                                           if (data.type === "CURRENT_FIGHT") {
+                                                                              currenConfig = data.config;
                                                                               if (currentFightText) 
                                                                                   currentFightText.innerText = `Current fight: ${data.fight.playerA} vs ${data.fight.playerB} — round ${data.fight.game} of ${data.fight.totalGames}`;
                                                                               
@@ -80,11 +85,11 @@ async function register() {
                                                                             }
                                       
                                           if (data.type === "MOVE") {
-                                                                     updatePiles(data.piles);
-                                                                     logEvent(`${data.player} moves to state: ${data.piles}, bonus time: ${data.bonus}ms`);
+                                                                     updatePiles(data);
+                                                                     logEvent(`${data.player} moves to state: ${data.piles}, bonus: ${data.bonus}ms`);
                                           } 
                                           if (data.type === "DISQUALIFIED_FOR_INVALID_MOVE") {
-                                                                     updatePiles(data.piles);
+                                                                     updatePiles(data);
                                                                      logEvent(`${data.player} tried to make an invalid move ${data.invalidMove} and is looser!`);
                                           } 
 
@@ -166,14 +171,25 @@ function beginContest() {
     logEvent("🏁 Contest begins!");
 }
 
-function updatePiles(piles) {
+function updatePiles(data) {
+    let forb = currenConfig.forbidden ;
+    let piles = data.piles;
+    let player = data.player.trim();
     const display = document.getElementById('piles-display');
     display.innerHTML = ''; // Clear
     
     let pilesString = "";
      piles.forEach((count, index) => {
-                                      let pileString = "🪙".repeat(count); 
-                                       pilesString += `<div> (${count})${pileString} </div>`;
+                                      let pile = "🪙".repeat(count); 
+                                       let P = [...pile];
+                                        for(let k = 0; k < forb.length; k++) 
+                                            P[count-forb[k]] = `💥`; //'❌';
+                                        console.log(P)  
+                                         pile = P.join('');     
+                                          if(index === data.movedFrom) {
+                                             pile +=  player;
+                                          }
+                                           pilesString +=  String(count).padStart(2) + ": " + pile + "\n";  
                                      }
                   );
       display.innerHTML = pilesString;    

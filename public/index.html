@@ -10,10 +10,14 @@
  <center>
     <header>
     
-        <h1>🪙 Save Your Friend!</h1>
-        <img id="logo" src="studentbot.png" alt="Arena Logo" title="Hover me 3 times to start the demo">
+       <a href="rules.html" class="rules-link" target="_blank">
+         <h1> 🪙 Make Your Super Bot! </h1>
+       </a>
+
+         <img id="logo" src="studentbot.png" alt="Arena Logo" title="Rules and Goals of Game">
+        
         <p id="status-text">Connecting to server...</p>
-        <p id="deadline-timer" class="deadline-timer">Tournament starts in 15:00</p>
+        <p id="deadline-timer" class="deadline-timer">Tournament starts in 15:00</p> 
     </header>
 
     <main id="registration-view">
@@ -24,7 +28,7 @@
 
             <div class="input-group">
                 <input type="email" id="email" placeholder="Your Google Email" required>
-                 <input type="text" id="avatar-name" placeholder="Your Avatar-Bot Name" required>
+                 <input type="text" id="avatar-name" placeholder="Your Avatar-Bot 🤖 Name" required>
             </div>
 
              <br>
@@ -63,7 +67,7 @@ function play(piles, forbidden, context) {
 
                 <div id="current-fight" class="current-fight">Waiting for current fight...</div>
 
-                 <div id="piles-display">?</div>
+                 <pre id="piles-display">...</pre>
 
                  <div id="game-log"></div>
             </section>
