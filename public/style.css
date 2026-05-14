@@ -39,6 +39,7 @@ input {
 }
 
 #invitation-label {color: #00ffcc; font-weight: bold; }
+pre,
 textarea {
     width: 100%;
     height: 200px;
@@ -74,14 +75,16 @@ button {
     border: 2px solid #0f3460;
     border-radius: 14px;
     margin-bottom: 12px;
-    transition: transform 160ms ease, box-shadow 160ms ease;
+    /*transition: transform 2000ms ease, box-shadow 2000ms ease;*/
     cursor: pointer;
 }
 
+/*
 #logo:hover {
     transform: scale(2);
     box-shadow: 0 0 18px rgba(142, 246, 228, 0.4);
 }
+*/    
 
 .current-fight {
     margin: 14px 0;
@@ -141,12 +144,14 @@ button {
 }
 
 #piles-display {
-    /*display: flex;
-    flex-direction: row;
-    */
     justify-content: space-around;
     font-size: 1rem;
     padding: 10px 0;
+    transition: transform 2000ms ease, box-shadow 2000ms ease;
+}
+#piles-display:hover {
+                       transform: scale(2);
+                       box-shadow: 0 0 18px rgba(142, 246, 228, 0.4);
 }
 
 #game-log {
@@ -155,6 +160,27 @@ button {
     background: rgba(0,0,0,0.2);
     padding: 10px;
     font-size: 0.9rem;
+    transition: transform 2000ms ease, box-shadow 2000ms ease;
 }
-
+#game-log:hover {
+                 transform: scale(2);
+                 box-shadow: 0 0 18px rgba(142, 246, 228, 0.4);
+}
 .pile { display: flex; flex-direction: row; align-items: center; }
+
+
+#logo,
+#score-table, 
+#match-matrix  { transition: transform 2000ms ease, box-shadow 2000ms ease;}
+
+#logo:hover,
+#score-table:hover, 
+#match-matrix:hover {transform: scale(2); box-shadow: 0 0 18px rgba(142, 246, 228, 0.4);}
+
+#match-matrix-table { border-collapse: collapse;}
+#match-matrix-table td {
+                        border: 1px solid #020b81;
+                        padding: 2px 4px;
+                        text-align: center;
+                        /*font-size: 0.9rem;*/
+                      }

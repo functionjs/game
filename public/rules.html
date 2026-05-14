@@ -12,70 +12,90 @@
 
 <h1>  Bot Championship</h1>
 
-<img id="logo" src="studentbot.png" alt="Arena Logo" title="Your Bot's Avatar">
+<img id="logo" src="studentbot.png" alt="Arena Logo" title="Make Your Super Gamer Bot!">
 
 <hr> 
 
 <h2> Goal </h2>
 
 <p>
-Create Your smart javascript function to Win in the distributed Nim-like Game .
+ Create Your Smart Bot JavaScript function to Win in the distributed Nim-like Game tournament!
+</p>
 
 <hr> 
 
 <h2> Rules </h2>
 
 <ol>
-   <li> There are many accounts: account0, account1, account2, .... </li>
-   <li> Each account has a random initial number of coins 🪙. </li>
-   <li> Player - your Bot - play against other Bots in tournament. </li>
-   <li> On a every turn, a Player: 
+   <li> There are many piles with coins: pile0, pile1, pile2, .... </li>
+   <li> Each pile has a random initial number of coins 🪙🪙🪙🪙.... </li>
+   <li> Player - your Bot - plays against other Bots in tournament. </li>
+   <li> On every turn, a Player: 
         <ul>
-            <li> Can only see the current state of the game (number of coins in each account) and the forbidden moves. </li>
+            <li> Can only see the current state of the game (number of coins in each pile) and the forbidden moves. </li>
             <li> Cannot see the history of the game or the opponent's Bot code. </li>
-            <li> Selects ANY nonempty account </li> 
-            <li> Removes ANY correct (non-forbidden) positive number of coins </li>
+            <li> May selects ANY pile </li> 
+            <li> May offer to remove ANY correct (non-forbidden) positive number of coins </li>
         </ul>
    </li>
-     <li> Player who removes the last coin wins. </li>
+     <li> Player who removes the last coin Wins in NORMAL game mode. </li>
+     <li> Player who removes the last coin Loses in GIVEAWAY game mode. </li>
+     <li> Player who broke the Rules of the Game Loses anyway </li>
 </ol>
+
+<img src=https://hackmd.io/_uploads/B13awdQ1fl.jpg>
 
 <hr>
 
 <h2> What You Must Implement </h2>
  
-<p> You must implement a smart javascript function play() with no more than 4096 bytes of code
-     that will allow your bot to make optimal and quick moves in the game. </p>
+<p> 
+     For Your Bot-Gamer You must implement a Smart javascript function play()  with no more than 4096 bytes of code
+     that will allow Your Bot make optimal and quick moves in the game. 
+</p>
      <br>
-<p> Your function play() will be called by the game engine on every turn with the current state of the game and the forbidden moves as input, and it must return the account index and the number of coins to remove as output. </p>     
+<p> 
+     Your function play() will be called by the Game Engine on every turn with the current State of the Game and the Forbidden moves as input.
+ <br>
+     Your function play() must return  { the pile Index and the Number of coins } to remove at current Move.  
+ <br>
+     After checking the correctness of Your move, the Game Engine will update the State of the Game and call Your Opponent play() for the next turn.
+ <br> 
+     And so on until the end of the Game when one of the Players wins and another loses.
+</p>     
 
 <hr>
  
-<h2> Priminive Example </h2>
+<h2> Simple Example </h2>
 
-<p> Priminive Example of not very smart Bot function play() : </p>     
+<p>
+   Example of not very smart Bot function play() :
+</p>     
 
 <pre>
-function play(piles, forbidden, context) {
-                                         // TO DO 
-                                         const target = piles.findIndex(p => p > 0); // find the first non-empty account
-                                         let N;
-                                          if(piles[target]==1) N=1;
-                                          else                 N=2;
+     function play(piles, forbidden, context) {
+                                              // TO DO 
+                                              const target = piles.findIndex(p => p > 0); // find the first non-empty pile
+                                              let NumberOfCoins;
+                                               if(piles[target]==1) NumberOfCoins=1;
+                                               else                 NumberOfCoins=2;
+     
+                                                if (forbidden.includes(NumberOfCoins)) NumberOfCoins=1;   // if for example 2 is forbidden we take 1 coin
+     
+                                                 return { pileIndex: target, count: NumberOfCoins }; 
+     }
+     //function play() INPUT: (piles, forbidden, context)
+     // piles:     array of integers  (coins) representing the current state of the game
+     // forbidden: array of forbidden moves
+     // context:   { mode: CONFIG.mode, timeRemaining: player.timeBank } 
+     //                    CONFIG.mode can be "NORMAL" or "GIVEAWAY" (see rules for details)
+     //function play() OUTPUT: Return an object { pileIndex: target, count: NumberOfCoins };
+     //For example { pileIndex: 0, count: 1 } represents Bot's  want to take 1 coin from pile with Index 0 
+ </pre>
+ 
+ 
 
-                                           if (forbidden.includes(N)) N=1;   // if for example 2 is forbidden we take 1 coin
-
-                                            return { pileIndex: target, count: N }; 
-}
-
-// piles:     array of integers  (coins) representing the current state of the game
-// forbidden: array of forbidden moves
-// context:   { mode: CONFIG.mode, timeRemaining: player.timeBank } 
-//                    CONFIG.mode can be "NORMAL" or "GIVEAWAY" (see rules for details)
-//OUTPUTS: Return an object { pileIndex: target, count: N };
-//For example { pileIndex: 0, count: 1 } represents Bot's  want to take 1 coin from pile 0 
-
-</pre>
+ 
 
  </body>
 </html>

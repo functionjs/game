@@ -1,96 +1,101 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Save Your Friend! - Bot Championship</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
- <center>
-    <header>
-    
-       <a href="rules.html" class="rules-link" target="_blank">
-         <h1> 🪙 Make Your Super Bot! </h1>
-       </a>
 
-         <img id="logo" src="studentbot.png" alt="Arena Logo" title="Rules and Goals of Game">
-        
-        <p id="status-text">Connecting to server...</p>
-        <p id="deadline-timer" class="deadline-timer">Tournament starts in 15:00</p> 
-    </header>
+ <head>
+     <meta charset="UTF-8">
+     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+     <title>Save Your Friend! - Bot Championship</title>
+     <link rel="stylesheet" href="style.css">
+ </head>
 
-    <main id="registration-view">
+ <body>
+  <center>
+     <header>
+      <a href="rules.html" class="rules-link" target="_blank">
+        <h1> 🪙 Make Your Super Gamer Bot! </h1>
+      </a>
+ 
+      <img id="logo" src="studentbot.png" alt="Arena Logo" title="Make Your Super Gamer Bot!">
+         
+      <p id="status-text">Connecting to server...</p>
+      <p id="deadline-timer" class="deadline-timer">Tournament starts in 15:00</p> 
+     </header>
+ 
+     <main id="registration-view">
+      <section class="card">
+         <h2>Register Your Avatar-Bot</h2>
 
-        <section class="card">
+         <div class="input-group">
+              <input type="email" id="email" placeholder="Your Google Email" required>
+               <input type="text" id="avatar-name" placeholder="Your Avatar-Bot 🤖 Name" required>
+         </div>
+         <br>
+            <label id="invitation-label" for="bot-code">Write your Bot JS logic as function play() here:</label>
+          <textarea id="bot-code" spellcheck="false">
+ // piles:     array of integers  (coins) representing the current state of the game
+ // forbidden: array of forbidden moves
+ // context:   { mode: CONFIG.mode, timeRemaining: player.timeBank } 
+ //                    CONFIG.mode can be "NORMAL" or "GIVEAWAY" (see rules for details)
+ //OUTPUTS: Return an object { pileIndex: target, count: N };
+ //For example { pileIndex: 0, count: 1 } represents Bot's  want to take 1 coin from pile 0 
+ 
+ function play(piles, forbidden, context) {
+                                          // TO DO 
+                                          const target = piles.findIndex(p => p > 0);
+                                           if(piles[target]== 1) N = 1;
+                                           else                  N = 2;
+                                            return { pileIndex: target, count: N }; 
+ }
+          </textarea>
 
-            <h2>Register Your Avatar-Bot</h2>
+          <button id="btn-register" onclick="register()">Enter Championship</button>
+ 
+      </section>
+     </main><!--end of registration-view--> 
+ </center>
+ 
+     <hr>
+ 
+     <main id="dashboard-view" class="hidden">
+       <div class="game-container">
+ 
+        <section class="arena card">
+         <center>   
+         <h2>Live Battle</h2>
+         </center>
 
-            <div class="input-group">
-                <input type="email" id="email" placeholder="Your Google Email" required>
-                 <input type="text" id="avatar-name" placeholder="Your Avatar-Bot 🤖 Name" required>
-            </div>
+         <div id="current-fight" class="current-fight">Waiting for current fight...</div>
 
-             <br>
+         <pre id="piles-display">...</pre>
 
-             <label id="invitation-label" for="bot-code">Write your Bot JS logic as function play() here:</label>
-            <textarea id="bot-code" spellcheck="false">
-// piles:     array of integers  (coins) representing the current state of the game
-// forbidden: array of forbidden moves
-// context:   { mode: CONFIG.mode, timeRemaining: player.timeBank } 
-//                    CONFIG.mode can be "NORMAL" or "GIVEAWAY" (see rules for details)
-//OUTPUTS: Return an object { pileIndex: target, count: N };
-//For example { pileIndex: 0, count: 1 } represents Bot's  want to take 1 coin from pile 0 
-
-function play(piles, forbidden, context) {
-                                         // TO DO 
-                                         const target = piles.findIndex(p => p > 0);
-                                          if(piles[target]== 1) N = 1;
-                                          else                  N = 2;
-                                           return { pileIndex: target, count: N }; 
-}
-            </textarea>
-            <button id="btn-register" onclick="register()">Enter Championship</button>
-
+         <div id="game-log"></div>
         </section>
+ 
+                    <aside class="leaderboard card">
+                     <center>
+                      
+                     <h2>Leaderboard</h2>
 
-    </main>
-  </center>
+                     <table id="score-table">
+                      <thead>
+                       <tr><th>Player</th><th>Score</th><th>Bank</th></tr>
+                      </thead>
 
-    <hr>
+                      <tbody id="leaderboard-body"></tbody>
+                     </table>
 
-    <main id="dashboard-view" class="hidden">
-        <div class="game-container">
+                     <div id="match-matrix-container" class="matrix-container">
+                     <center>
+                         <div id="match-matrix"></div>
+                     </center>
+                     </div>
 
-            <section class="arena card">
-                <h2>Live Battle</h2>
+                     </center>
+                    </aside>
+       </div><!--end of game-container-->
+     </main><!--end of dashboard-view--> 
+ 
+      <script src="script.js"></script>
 
-                <div id="current-fight" class="current-fight">Waiting for current fight...</div>
-
-                 <pre id="piles-display">...</pre>
-
-                 <div id="game-log"></div>
-            </section>
-
-            <aside class="leaderboard card">
-
-                <h2>Leaderboard</h2>
-
-                <table id="score-table">
-                    <thead>
-                        <tr><th>Player</th><th>Score</th><th>Bank</th></tr>
-                    </thead>
-                    <tbody id="leaderboard-body"></tbody>
-                </table>
-
-                <div id="match-matrix-container" class="matrix-container">
-                    <div id="match-matrix"></div>
-                </div>
-
-            </aside>
-        </div>
-    </main>
-
-    <script src="script.js"></script>
-</body>
+ </body>
 </html>
