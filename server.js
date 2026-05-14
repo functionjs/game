@@ -1,10 +1,10 @@
 // version 0.1.0 
-const express             = require('express');
-const { WebSocketServer } = require('ws');
-const vm                  = require('vm');
-const http                = require('http');
+const express             = require('express'); // Express framework for handling HTTP requests and serving the dashboard
+const { WebSocketServer } = require('ws'); // WebSocket library for real-time communication with the dashboard
+const vm                  = require('vm'); // Node's built-in virtual machine module for safely executing untrusted Bot code in a sandboxed environment with timeouts to prevent abuse
+const http                = require('http'); // Node's built-in HTTP module to create a server that can handle both Express and WebSocket connections on the same port
 
-const  app = express(); // Express app for handling HTTP requests and serving the dashboard
+const  app = express(); // Express application for handling HTTP requests and serving the dashboard
 const   server = http.createServer(app); // Create an HTTP server to attach both Express and WebSocket to the same port
 const    wss = new WebSocketServer({ server }); // WebSocket server for real-time communication with the dashboard
 

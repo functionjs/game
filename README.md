@@ -5,16 +5,20 @@
 ## Game Server  is the "Brain" of your project. 
 
 
-We have written this `server.js` to be as readable as possible for pupils. It uses **Express** for the web server, **ws** for the live dashboard, and the **vm** module to run student code safely.
+We have written this `server.js` to be as readable as possible. 
+
+It uses **Express** for the web server, **ws** for the live dashboard, and the **vm** module to run student's Bot code safely.
 
 ### 1. Prerequisites
 
-In GitHub Codespace terminal, run:
+If express not isntalled then in GitHub Codespace terminal run:
 `npm install express ws`
 
 ---
 
-### 2. Key Explanations about Game Server 
+###  Registration in Game Platform on start page
+
+After Game platform started we may obtain address of working server and open index.html 
 
 On Registration by  e-mail and writing Bot-Avatar Name  Gamer must copypast (or write) text of main  Bot function play() by pattern:
 ```javascript
@@ -33,6 +37,9 @@ function play(piles, forbidden, context) {
                                          //   return { pileIndex: target, count: N }; 
 }
 ```
+---
+
+### 2. Key Explanations about Game Server 
 
 * **`vm.Script`**: This is like a "protective bubble." It runs the student's code, but if their code has an infinite loop (`while(true)`), the `timeout` setting pops the bubble and stops it before the server crashes.
 * **`players` Object**: This is our database. It stays in the server's memory. If you restart the server, the "database" wipes clean (simplest way).
