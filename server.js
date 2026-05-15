@@ -285,7 +285,8 @@ let isPaused = false;
                                                          console.log(`${currentPlayer.name} made Error :`,report.error);
                                                          broadcast({ type: "DISQUALIFIED_FOR_ERROR", error: report.error, player: currentPlayer.name  });
                                                           //currentPlayer.score -= 10;
-                                                          currentPlayer.timeBank = 0; // Disqualified player loses all remaining time
+                                                          currentPlayer.timeBank -= CONFIG.baseTime ;
+                                                           if(currentPlayer.timeBank<0)currentPlayer.timeBank=0; // Disqualified player loses all remaining time
                                                           opponentPlayer.score += 1;
                                                           recordMatchResult(emailA, emailB, opponentEmail(state.turn), 0);
                                                            getMatchMatrixDisplay();
@@ -297,8 +298,9 @@ let isPaused = false;
                                                               console.log(`${currentPlayer.name}(${state.turn}) try to do invalid move:`,move, " for piles: ", state.piles);
                                                               broadcast({ type: "DISQUALIFIED_FOR_INVALID_MOVE", invalidMove: move, piles: state.piles, player: currentPlayer.name  });
                                                               // currentPlayer.score -= 10;
-                                                               currentPlayer.timeBank = 0; // Disqualified player loses all remaining time
-                                                               opponentPlayer.score += 1;
+                                                               currentPlayer.timeBank -= CONFIG.baseTime ;
+                                                                if(currentPlayer.timeBank<0)currentPlayer.timeBank=0; // Disqualified player loses all remaining time
+                                                               opponentPlayer.score += 1; 
                                                                recordMatchResult(emailA, emailB, opponentEmail(state.turn), 0);
                                                                 getMatchMatrixDisplay();
                                                                  broadcast({ type: "MATCH_UPDATE", players, matchMatrix: Matrix });
@@ -323,7 +325,7 @@ let isPaused = false;
                                              console.log(`Winner email : ${winnerEmail} `);                                                                                                                         
                                               console.log(`Winner of match : ${currentPlayer.name} `);                                                                                                                         
                                              currentPlayer.score += 1;
-                                             opponentPlayer.timeBank = 0; // The loser of the match loses all remaining time for the next matches, while the winner keeps their remaining time as carry-over for their next matches. This rewards players who win quickly and penalizes those who lose or play inefficiently.
+                                             //opponentPlayer.timeBank = 0; // The loser of the match loses all remaining time for the next matches, while the winner keeps their remaining time as carry-over for their next matches. This rewards players who win quickly and penalizes those who lose or play inefficiently.
                                               recordMatchResult(emailA, emailB, winnerEmail, 0);
                                                getMatchMatrixDisplay();
                                                 broadcast({ type: "MATCH_UPDATE", players, matchMatrix: Matrix });
@@ -360,7 +362,7 @@ let isPaused = false;
                                  let report = { result: sandbox.result, timeSpent: duration }
                                   return report; // contains the move = sandbox.result from the Bot's play() function
                          }
-                     catch (err) {// If there's an error (syntax error, runtime error, timeout), we consider it an invalid move and disqualify the player for that match
+                        catch (err) {// If there's an error (syntax error, runtime error, timeout), we consider it an invalid move and disqualify the player for that match
                                    let report = {result: sandbox.result, error: "ABUSER", detail: err.message }
                                     return report; // move={} and error is "ABUSER" to indicate the Bot code is not compliant with the rules (syntax error, runtime error, or timeout)
                                  }
