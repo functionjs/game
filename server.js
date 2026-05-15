@@ -3,6 +3,10 @@ const express             = require('express'); // Express framework for handlin
 const { WebSocketServer } = require('ws'); // WebSocket library for real-time communication with the dashboard
 const vm                  = require('vm'); // Node's built-in virtual machine module for safely executing untrusted Bot code in a sandboxed environment with timeouts to prevent abuse
 const http                = require('http'); // Node's built-in HTTP module to create a server that can handle both Express and WebSocket connections on the same port
+const fs                  = require('fs').promises; // newest File system module for reading/writing tournament data, if needed for persistence or logging
+const path                = require('path');  // Node's built-in path module for handling file paths, such as where to store tournament data or logs 
+ const DATA_DIR = path.join(__dirname, 'data'); // Directory to store tournament data, logs, or player registrations if needed. This keeps the project organized and allows for future features like saving tournament history or player stats. Make sure this directory exists or add code to create it if it doesn't. 
+  const TOURNAMENTS_FILE = path.join(DATA_DIR, 'tournaments.json'); // File to store tournament data in JSON format. This allows for persistence of tournament results and player registrations across server restarts, and can be used for analytics or displaying past tournaments on the dashboard. Make sure to handle file read/write operations with care to avoid data corruption, especially if multiple tournaments are run in quick succession. Consider implementing a simple locking mechanism if needed to prevent concurrent writes.
 
 const  app = express(); // Express application for handling HTTP requests and serving the dashboard
 const   server = http.createServer(app); // Create an HTTP server to attach both Express and WebSocket to the same port
@@ -12,55 +16,81 @@ const    wss = new WebSocketServer({ server }); // WebSocket server for real-tim
         app.use(express.static('public')); // Serves your index.html
 
          // --- ROUTES ---
+         // Endpoint for players to register their Bot code. Expects { email, name, code } in the request body. Validates code size and stores player info. 
+         app.post('/register', 
+                              //--------------------------------------------------------------------- 
+                              async (req, res) => {await tryRegisterPlayer(req, res);}        
+         );
 var playersNumber = 0;
 var players = {};
-         app.post('/register', 
-                  //--------------------------------------------------------------------- 
-                 // Endpoint for players to register their Bot code. Expects { email, name, code } in the request body. Validates code size and stores player info. 
-                  (req, res) => {
+                  // async registration function to allow for future enhancements like saving player data to a file or database, or performing asynchronous validation if needed. Currently, it validates the code size and checks for duplicate email registrations before storing the player info in memory. It also compiles the Bot code in a virtual machine to catch syntax errors before registration, providing immediate feedback to the player and preventing invalid Bots from entering the tournament.  
+                 async function
+                   tryRegisterPlayer(req, res) {//await tryToRegisterPlayer(req, res);
                                  const { email, name, code } = req.body;
-                                 console.log(`Registering player: ${name} (${email})`);
+                                 console.log(`beginning Registering player: ${name} (${email}) ...`);
                                   if (code.length > CONFIG.maxCodeSize) {
-                                       let errmessage = `Code too big (must be <= ${CONFIG.maxCodeSize} characters) for player: ${name} (${email})`;
+                                       let errmessage = `Bot Code too big (must be <= ${CONFIG.maxCodeSize} characters) for player: ${name} (${email})`;
                                         console.log(errmessage);
                                          return res.status(400).send(errmessage);    
                                  }
                                   
                                   //else
                                    if(!players[email]){ // new player 
+                                               
                                           // Try to compile the Bot code in virtual machine to catch syntax errors before registration
-                                          const botCodeString=`result = (${code})(piles, forbidden, context)`
+                                          const botCodeString=code
                                            try {
-                                                 const  botScript = new vm.Script(botCodeString);               
-                                                  let  idx= playersNumber;
-                                                   playersNumber++;
-                                                    players[email] = { 
-                                                                      idx,
-                                                                      name, 
-                                                                      code, 
-                                                                      timeBank: CONFIG.baseTime, 
-                                                                      score: 0,
-                                                                      status: "READY"
-                                                                    };
+                                               console.log(`Compiling Bot code for player: ${name} (${email}) to check for syntax errors...`);
+                                               const  botScript = new vm.Script(botCodeString);               
+                                               console.log(`Creating context`);
+                                                const context = vm.createContext({});
+                                                 console.log(`Running Bot code in context with timeout to check for syntax errors and validate play() function...`); 
+                                                  botScript.runInContext(context, { timeout: 20 });// Run the Bot code in the sandboxed context to check for syntax errors and to ensure it defines a play() function as expected by the tournament rules. This also prevents players from registering Bots with invalid code that would cause issues during matches, and provides immediate feedback to the player about any issues with their code at the time of registration.
+                                                   console.log(`Bot code executed successfully. Validating play() function...`);
+                                                   const playFunction = context.play; // Check if the play function is defined and meets the requirements (not async, correct name) as part of the validation process to ensure that registered Bots are compliant with the tournament rules and can be executed properly during matches. This helps maintain a fair and functional tournament environment by preventing non-compliant Bots from being registered.
+                                                    // --- TESTS ---
+                                                     // Test 1: Check that the type is a function
+                                                     if (typeof playFunction !== 'function') {
+                                                         throw new Error('Bot code must define a function named "play"');
+                                                     }
+                                                         // Test 2: Check that the function name is exactly 'play'
+                                                         if (playFunction.name !== 'play') {
+                                                              throw new Error(`Expected function name to be "play", but got "${playFunction.name}"`);
+                                                         }
+                                                         // Test 3: Check that the function is not asynchronous
+                                                         // Async functions return a special tag [object AsyncFunction]
+                                                         const isAsync = Object.prototype.toString.call(playFunction) === '[object AsyncFunction]';
+                                                         if (isAsync) {
+                                                             throw new Error('The "play" function must be synchronous (no async/await allowed)');
+                                                         }
+                                                            let  idx= playersNumber;
+                                                             playersNumber++;
+                                                              players[email] = { 
+                                                                                idx,
+                                                                                name, 
+                                                                                code, 
+                                                                                timeBank: CONFIG.baseTime, 
+                                                                                score: 0,
+                                                                                status: "READY"
+                                                                              };
                                            }
                                            catch  (err) {
-                                                          let errmessage = `Syntax error in Bot code for player: ${name} (${email}): ${err.message}`;
+                                                          let errmessage = `Error in Bot code for player: ${name} (${email}): ${err.message}`;
                                                            console.log(errmessage);
                                                             delete players[email]; // Remove player from registry if their code has syntax errors
                                                              return res.status(400).send(errmessage);    
                                            }         
                                             
                                              broadcast({ type: "NEW_PLAYER", name });
-                                             console.log(`     Registered!  Total players: ${playersNumber}`);
+                                             console.log(`... Registered!  Total players: ${playersNumber}`);
                                              res.send("Registered!");
                                    }   
                                    else { // Duplicate email registration attempt
-                                          let errmessage = `Player with email ${email} is already registered.`;
+                                          let errmessage = `Player with email ${email} is already registered!!?`;
                                            console.log(errmessage);
                                             res.status(400).send(errmessage);
                                         }
-                                }        
-        );
+                                }
          
 // Start the server
 const PORT = 3000;
@@ -161,22 +191,36 @@ Math.random = mulberry32(12345);// Seeded random number generator for reproducib
 
 
 // --- TOURNAMENT LOGIC ---
-    async function 
-    startChampionship() {
-                         if (tournamentStarted) return;
-
-                         //resetConfigPiles()
-                          //resetConfigForbiddenMoves() 
-
+        async function 
+        saveTournamentData(data) {
+                                  await fs.appendFile(TOURNAMENTS_FILE, JSON.stringify(data, null, 2));
+         }
+let currentTournamentId = null;
+let isPaused = false;
+   async function 
+    startChampionship(manual=false) { // Main function to start the tournament, run matches, and broadcast results. The manual parameter indicates whether the tournament was started manually by a client request or automatically by the scheduled timeout. This allows for different handling if needed, such as resetting piles and forbidden moves only for automatic starts to allow for consistent conditions across scheduled tournaments, while manual starts could be used for testing with specific configurations.
+                         if (tournamentStarted) return { success: false, reason: "Tournament Already running" };;
                          //else start the tournament
                              tournamentStarted = true; // Set the tournamentStarted flag to prevent multiple starts
+                             isPaused = false;
+                             currentTournamentId = `t_${Date.now()}`;
                               if (startTimeout) {// If the tournament was started early by a client request, clear the scheduled start timeout to prevent it from firing later
                                   clearTimeout(startTimeout);
                                    startTimeout = null;
                               }
-                               console.log("🤡🏆🤖 Championship Started!");
-                               
-                               // Create player list with indices
+
+                               try {
+                                    await runRounRobinMatches(); // Main function to run the round-robin matches between all registered players, with the current configuration of piles, forbidden moves, and time limits. This function handles the entire flow of the tournament, including broadcasting updates to the dashboard and saving tournament data for record-keeping. It iterates through all pairs of players, runs matches between them using the runMatch function, and updates the matchMatrix with results for display on the dashboard. After all matches are completed, it broadcasts the final results and resets the tournament state for potential future tournaments.
+                               }
+                                finally {
+                                         tournamentStarted = false;
+                                          await saveTournamentData({ players, currentTournamentId, Matrix, CONFIG });
+                                }
+    }
+        async function 
+         runRounRobinMatches() { // Run a round-robin tournament where each Bot plays against every other Bot. This function can be used for future enhancements, such as allowing for different tournament formats (e.g., double elimination, Swiss system) or for running multiple rounds of the tournament with different configurations. Currently, it simply iterates through all pairs of players and runs matches between them using the runMatch function.    
+                                           // Create player list with indices
+                               console.log("🤡🏆🤖 Championship Started!");            
                                const emails = Object.keys(players);
                                const playerList = [];
                                 for (let i = 0; i < emails.length; i++) 
@@ -185,7 +229,10 @@ Math.random = mulberry32(12345);// Seeded random number generator for reproducib
                                                       name: players[emails[i]].name,
                                                       email: emails[i]
                                                     });
-                               
+                                
+                                // Save a snapshot of the current new tournament state, including player information and registration time, to a file for record-keeping and potential future features like displaying past tournaments or analytics. This snapshot can be used to track the history of tournaments and player participation over time.
+                                const snapshot = { id: currentTournamentId, date: new Date().toISOString(), players: {...players} };
+                                 await saveTournamentData(snapshot);
                                
                                // Generate and send initial tournament Matrix
                                generateInitialMatrix();
@@ -194,6 +241,8 @@ Math.random = mulberry32(12345);// Seeded random number generator for reproducib
                                 // Run a round-robin tournament where each Bot plays against every other Bot
                                 for (let i = 0; i < playersNumber; i++) {
                                     for (let j = i + 1; j < playersNumber; j++) {
+                                        if(isPaused)delay(100000); // If the tournament is paused, wait before starting the next match. This allows for manual pausing and resuming of the tournament if needed, such as for breaks or to address any issues that arise during the tournament. The isPaused flag can be toggled by a client request or an admin command, and the delay will ensure that matches do not start while the tournament is paused.
+
                                          await runMatch(emails[i], emails[j]);
                                     }
                                }
@@ -203,9 +252,8 @@ Math.random = mulberry32(12345);// Seeded random number generator for reproducib
                                  console.log("Results:", Matrix);
                                  broadcast({ type: "END", players, matchMatrix: Matrix });// After all matches are done, broadcast the final results to the dashboard
                                   tournamentStarted = false;
-    }
-            
-
+         }   
+           
         async function 
         runMatch(emailA, emailB) { // Run a match of numberOfGamesPerMatch (default: 10) games between two Bots, alternating who goes first, and applying the time carry-over logic based on the tournament mode
                                       function opponentEmail(PlayerEmail){ return  (PlayerEmail === emailA) ? emailB : emailA;}
@@ -291,7 +339,8 @@ Math.random = mulberry32(12345);// Seeded random number generator for reproducib
                      const sandbox = { // Provide the Bot with a safe, read-only view of the game state
                                       piles: [...currentPiles], // Provide a copy of the piles to prevent cheating
                                       forbidden: CONFIG.forbidden,// Provide forbidden moves for bot's logic
-                                      context: { mode: CONFIG.mode, timeRemaining: player.timeBank } // Additional context for bots to make informed decisions
+                                      context: { mode: CONFIG.mode, timeRemaining: player.timeBank }, // Additional context for bots to make informed decisions
+                                      result: null // This will hold the Bot's move after executing their play() function
                                      };
             
                      // Construct the code to execute the player's Bot play() function and capture its result 
@@ -304,7 +353,7 @@ Math.random = mulberry32(12345);// Seeded random number generator for reproducib
                              // Run with time limit
                              vm.createContext(sandbox);// Create a new context for each execution to prevent state sharing
                               // Run the Bot code with a timeout to prevent infinite loops or long execution times. The timeout is set to the player's remaining time bank. 
-                              botScript.runInContext(sandbox, { timeout: (+player.timeBank+CONFIG.baseTime) }); // Add baseTime to ensure Bots have at least some time to make a move even if their timeBank is low
+                              botScript.runInContext(sandbox, { timeout: Math.min(50, +player.timeBank+CONFIG.baseTime) }); // Add baseTime to ensure Bots have at least some time to make a move even if their timeBank is low
                                //end time
                                const endTime = Date.now();
                                 const duration = endTime - startTime;
@@ -312,7 +361,7 @@ Math.random = mulberry32(12345);// Seeded random number generator for reproducib
                                   return report; // contains the move = sandbox.result from the Bot's play() function
                          }
                      catch (err) {// If there's an error (syntax error, runtime error, timeout), we consider it an invalid move and disqualify the player for that match
-                                   let report = {result: {}, error: "ABUSER", detail: err.message }
+                                   let report = {result: sandbox.result, error: "ABUSER", detail: err.message }
                                     return report; // move={} and error is "ABUSER" to indicate the Bot code is not compliant with the rules (syntax error, runtime error, or timeout)
                                  }
             }
