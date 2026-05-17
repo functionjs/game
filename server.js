@@ -16,81 +16,13 @@ const    wss = new WebSocketServer({ server }); // WebSocket server for real-tim
         app.use(express.static('public')); // Serves your index.html
 
          // --- ROUTES ---
-         // Endpoint for players to register their Bot code. Expects { email, name, code } in the request body. Validates code size and stores player info. 
-         app.post('/register', 
-                              //--------------------------------------------------------------------- 
-                              async (req, res) => {await tryRegisterPlayer(req, res);}        
-         );
+         // Player registration is now handled via WebSocket messages (type: "REGISTER_PLAYER")
+         // See the WebSocket message handler below for the registration logic
+         
 var playersNumber = 0;
 var players = {};
-                  // async registration function to allow for future enhancements like saving player data to a file or database, or performing asynchronous validation if needed. Currently, it validates the code size and checks for duplicate email registrations before storing the player info in memory. It also compiles the Bot code in a virtual machine to catch syntax errors before registration, providing immediate feedback to the player and preventing invalid Bots from entering the tournament.  
-                 async function
-                   tryRegisterPlayer(req, res) {//await tryToRegisterPlayer(req, res);
-                                 const { email, name, code } = req.body;
-                                 console.log(`beginning Registering player: ${name} (${email}) ...`);
-                                  if (code.length > CONFIG.maxCodeSize) {
-                                       let errmessage = `Bot Code too big (must be <= ${CONFIG.maxCodeSize} characters) for player: ${name} (${email})`;
-                                        console.log(errmessage);
-                                         return res.status(400).send(errmessage);    
-                                 }
-                                  
-                                  //else
-                                   if(!players[email]){ // new player 
-                                               
-                                          // Try to compile the Bot code in virtual machine to catch syntax errors before registration
-                                          const botCodeString=code
-                                           try {
-                                               console.log(`Compiling Bot code for player: ${name} (${email}) to check for syntax errors...`);
-                                               const  botScript = new vm.Script(botCodeString);               
-                                               console.log(`Creating context`);
-                                                const context = vm.createContext({});
-                                                 console.log(`Running Bot code in context with timeout to check for syntax errors and validate play() function...`); 
-                                                  botScript.runInContext(context, { timeout: 20 });// Run the Bot code in the sandboxed context to check for syntax errors and to ensure it defines a play() function as expected by the tournament rules. This also prevents players from registering Bots with invalid code that would cause issues during matches, and provides immediate feedback to the player about any issues with their code at the time of registration.
-                                                   console.log(`Bot code executed successfully. Validating play() function...`);
-                                                   const playFunction = context.play; // Check if the play function is defined and meets the requirements (not async, correct name) as part of the validation process to ensure that registered Bots are compliant with the tournament rules and can be executed properly during matches. This helps maintain a fair and functional tournament environment by preventing non-compliant Bots from being registered.
-                                                    // --- TESTS ---
-                                                     // Test 1: Check that the type is a function
-                                                     if (typeof playFunction !== 'function') {
-                                                         throw new Error('Bot code must define a function named "play"');
-                                                     }
-                                                         // Test 2: Check that the function name is exactly 'play'
-                                                         if (playFunction.name !== 'play') {
-                                                              throw new Error(`Expected function name to be "play", but got "${playFunction.name}"`);
-                                                         }
-                                                         // Test 3: Check that the function is not asynchronous
-                                                         // Async functions return a special tag [object AsyncFunction]
-                                                         const isAsync = Object.prototype.toString.call(playFunction) === '[object AsyncFunction]';
-                                                         if (isAsync) {
-                                                             throw new Error('The "play" function must be synchronous (no async/await allowed)');
-                                                         }
-                                                            let  idx= playersNumber;
-                                                             playersNumber++;
-                                                              players[email] = { 
-                                                                                idx,
-                                                                                name, 
-                                                                                code, 
-                                                                                timeBank: CONFIG.baseTime, 
-                                                                                score: 0,
-                                                                                status: "READY"
-                                                                              };
-                                           }
-                                           catch  (err) {
-                                                          let errmessage = `Error in Bot code for player: ${name} (${email}): ${err.message}`;
-                                                           console.log(errmessage);
-                                                            delete players[email]; // Remove player from registry if their code has syntax errors
-                                                             return res.status(400).send(errmessage);    
-                                           }         
-                                            
-                                             broadcast({ type: "NEW_PLAYER", name });
-                                             console.log(`... Registered!  Total players: ${playersNumber}`);
-                                             res.send("Registered!");
-                                   }   
-                                   else { // Duplicate email registration attempt
-                                          let errmessage = `Player with email ${email} is already registered!!?`;
-                                           console.log(errmessage);
-                                            res.status(400).send(errmessage);
-                                        }
-                                }
+                  // Refactored: Registration logic moved to WebSocket handler below
+         
          
 // Start the server
 const PORT = 3000;
@@ -101,7 +33,7 @@ const PORT = 3000;
                                     tournamentStartTime = Date.now() + DEFAULT_START_DELAY_MS;
                                      console.log(`Tournament scheduled to start at ${new Date(tournamentStartTime).toLocaleString()}`);
                                      startTimeout = setTimeout(startChampionship, DEFAULT_START_DELAY_MS);
-                                     broadcast({ type: "START_TIME", startTime: tournamentStartTime });
+                                     broadcast({ type: "START_TIME_DELTA", delta: DEFAULT_START_DELAY_MS });
                                   }
                      );        
 
@@ -115,30 +47,134 @@ const DEFAULT_START_DELAY_MS = 15 * 60 * 1000; // 15 minutes after server start
 
           wss.on('connection', 
              //---------------------------------------------------------------------            
-            // When a new game-clients connects, send them the tournament start time if ready
+            // When a new game-clients connects, send them the tournament start time delta if ready
             ws => {
                    if (tournamentStartTime) {
-                       let startTimeMessage = { type: "START_TIME", startTime: tournamentStartTime };
+                       let timeDelta = tournamentStartTime - Date.now(); // Time interval from now until tournament starts (in milliseconds)
+                       let startTimeMessage = { type: "START_TIME_DELTA", delta: timeDelta };
                         let startTimeString = JSON.stringify(startTimeMessage);
                          ws.send(startTimeString);
                         }
                         // Working with messages from clients, such as a request to start the tournament early           
                    ws.on('message', 
                           //-------------------------------------------------------------------- 
-                          message => {
+                          async message => {
                                       try {
                                           let data = JSON.parse(message);
+                                          
                                            //for testing purposes, allow clients to request starting the tournament immediately instead of waiting for the scheduled time
                                            if (data.type === "START_TOURNAMENT_REQUEST") {
                                                console.log("Tournament start requested by a client.");
-                                               // If tournament hasn't started yet -- clear the scheduled start timeout if it exists and start startChampionship immediately
-                                               if (!tournamentStarted) {
-                                                   if (startTimeout) {
-                                                       clearTimeout(startTimeout);
-                                                        startTimeout = null;
-                                                   }
-                                                    startChampionship();// Main function to start the tournament, run matches, and broadcast results
-                                               }
+                                                // If tournament hasn't started yet -- clear the scheduled start timeout if it exists and start startChampionship immediately
+                                                if (!tournamentStarted) {
+                                                    if (startTimeout) {
+                                                        clearTimeout(startTimeout);
+                                                         startTimeout = null;
+                                                    }
+                                                     startChampionship();// Main function to start the tournament, run matches, and broadcast results
+                                                }
+                                           }
+                                           else if (data.type === "PAUSE_TOURNAMENT_REQUEST") {
+                                               console.log("Tournament pause requested by a client.");
+                                                if (tournamentStarted && !isPaused) {
+                                                    isPaused = true;
+                                                     broadcast({ type: "CONTEST_PAUSED" });
+                                                     console.log("Tournament paused!");
+                                                }
+                                           }
+                                           else if (data.type === "RESUME_TOURNAMENT_REQUEST") {
+                                               console.log("Tournament resume requested by a client.");
+                                                if (tournamentStarted && isPaused) {
+                                                    isPaused = false;
+                                                     broadcast({ type: "CONTEST_RESUMED" });
+                                                     console.log("Tournament resumed!");
+                                                }
+                                           }
+                                           else if (data.type === "NEW_TOURNAMENT_REQUEST") {
+                                               console.log("New tournament requested by a client.");
+                                                if (!tournamentStarted) {
+                                                    // Reset tournament state and players for a new tournament
+                                                    playersNumber = 0;
+                                                     players = {};
+                                                     matchMatrix = {};
+                                                     if (startTimeout) {
+                                                         clearTimeout(startTimeout);
+                                                          startTimeout = null;
+                                                     }
+                                                     tournamentStartTime = Date.now() + DEFAULT_START_DELAY_MS;
+                                                      console.log(`New tournament scheduled to start at ${new Date(tournamentStartTime).toLocaleString()}`);
+                                                      startTimeout = setTimeout(startChampionship, DEFAULT_START_DELAY_MS);
+                                                      broadcast({ type: "START_TIME_DELTA", delta: DEFAULT_START_DELAY_MS });
+                                                      broadcast({ type: "NEW_CONTEST_BEGINS", players: {}, matchMatrix: {}, config: CONFIG });
+                                                }
+                                           }
+                                           else // Handle player registration via WebSocket
+                                                if (data.type === "REGISTER_PLAYER") {
+                                                   const { email, name, code } = data;
+                                                    console.log(`beginning Registering player: ${name} (${email}) ...`);
+
+                                                    // Check for duplicate email registration
+                                                    if (players[email]) {
+                                                        let errmessage = `Player with email ${email} is already registered!!?`;
+                                                         console.log(errmessage);
+                                                         ws.send(JSON.stringify({ type: "REGISTRATION_ERROR", message: errmessage }));
+                                                          return;
+                                                    }
+                                               
+                                                    // Validate code size
+                                                    if (code.length > CONFIG.maxCodeSize) {
+                                                        let errmessage = `Bot Code too big (must be <= ${CONFIG.maxCodeSize} characters) for player: ${name} (${email})`;
+                                                         console.log(errmessage);
+                                                         ws.send(JSON.stringify({ type: "REGISTRATION_ERROR", message: errmessage }));
+                                                          return;
+                                                    }
+                                                        // Try to compile the Bot code in virtual machine to catch syntax errors before registration
+                                                       const botCodeString = code;
+                                                        try {
+                                                            console.log(`Compiling Bot code for player: ${name} (${email}) to check for syntax errors...`);
+                                                             const botScript = new vm.Script(botCodeString);
+                                                              console.log(`Creating context`);
+                                                               const context = vm.createContext({});
+                                                                console.log(`Running Bot code in context with timeout to check for syntax errors and validate play() function...`);
+                                                                 botScript.runInContext(context, { timeout: 20 });
+                                                                  console.log(`Bot code executed successfully. Validating play() function...`);
+                                                                   const playFunction = context.play;
+                                                                    // --- VALIDATION TESTS ---
+                                                                    // Test 1: Check that the type is a function
+                                                                    if (typeof playFunction !== 'function') 
+                                                                        throw new Error('Bot code must define a function named "play"');
+                                                                    
+                                                                    // Test 2: Check that the function name is exactly 'play'
+                                                                    if (playFunction.name !== 'play') 
+                                                                        throw new Error(`Expected function name to be "play", but got "${playFunction.name}"`);
+                                                                    
+                                                                    // Test 3: Check that the function is not asynchronous
+                                                                    const isAsync = Object.prototype.toString.call(playFunction) === '[object AsyncFunction]';
+                                                                     if (isAsync) 
+                                                                         throw new Error('The "play" function must be synchronous (no async/await allowed)');
+                                                                     
+                                                                    // else Register the player
+                                                                     let idx = playersNumber;
+                                                                      playersNumber++;
+                                                                      players[email] = {
+                                                                          idx,
+                                                                          name,
+                                                                          code,
+                                                                          timeBank: CONFIG.baseTime,
+                                                                          score: 0,
+                                                                          status: "READY"
+                                                                      };
+                                                                       // Broadcast the new player to all connected clients
+                                                                       console.log(`... Registered!  Total players: ${playersNumber}`);
+                                                                       ws.send(JSON.stringify({ type: "REGISTRATION_SUCCESS", message: "Registered!" }));
+                                                                        broadcast({ type: "NEW_PLAYER", name });
+                                                        }
+                                                        catch (err) {
+                                                            let errmessage = `Error in Bot code for player: ${name} (${email}): ${err.message}`;
+                                                            console.log(errmessage);
+                                                             delete players[email];
+                                                             ws.send(JSON.stringify({ type: "REGISTRATION_ERROR", message: errmessage }));
+                                                        }
                                            }
                                          }
                                       catch (err) {
@@ -159,8 +195,8 @@ var CONFIG = {
                maxCodeSize: 4096, // bytes
                numberOfGamesPerMatch: 10 // Number of games each pair of Bots will play against each other
 };
-var randSeed = 12345; // Fixed seed for reproducibility of pile configurations and forbidden moves across tournaments
-               Math.random = mulberry32(randSeed);// Seeded random number generator for reproducibility of pile configurations and forbidden moves across tournaments
+var startSeed = 12345; // Fixed seed for reproducibility of pile configurations and forbidden moves across tournaments
+               Math.random = makeRandGenFromSeed(startSeed);// Seeded random number generator for reproducibility of pile configurations and forbidden moves across tournaments
    function resetConfigPiles(accountsNumber) {
                                  //let accountsNumber = Math.floor(Math.random() * 5) + 3; // Random number of accounts between 3 and 7
                                   let piles = []; 
@@ -240,9 +276,13 @@ let isPaused = false;
                                 broadcast({ type: "TOURNAMENT_STARTED", players: playerList, matchMatrix: Matrix, config: CONFIG });
                                
                                 // Run a round-robin tournament where each Bot plays against every other Bot
+                                startSeed++; // Change the seed for each tournament to generate different pile configurations and forbidden moves for each tournament, while still maintaining reproducibility if needed by using the same seed. This allows for variety in the game conditions across tournaments, which can make the competition more interesting and challenging for the players, while still allowing for consistent conditions if desired by using a fixed seed.
                                 for (let i = 0; i < playersNumber; i++) {
                                     for (let j = i + 1; j < playersNumber; j++) {
-                                        if(isPaused)delay(100000); // If the tournament is paused, wait before starting the next match. This allows for manual pausing and resuming of the tournament if needed, such as for breaks or to address any issues that arise during the tournament. The isPaused flag can be toggled by a client request or an admin command, and the delay will ensure that matches do not start while the tournament is paused.
+                                        // If the tournament is paused, wait until it's resumed
+                                        while(isPaused) {
+                                            await delay(1000); // Check pause status every second
+                                        }
 
                                          await runMatch(emails[i], emails[j]);
                                     }
@@ -258,7 +298,8 @@ let isPaused = false;
         async function 
         runMatch(emailA, emailB) { // Run a match of numberOfGamesPerMatch (default: 10) games between two Bots, alternating who goes first, and applying the time carry-over logic based on the tournament mode
                                       function opponentEmail(PlayerEmail){ return  (PlayerEmail === emailA) ? emailB : emailA;}
-                                  const N = CONFIG.numberOfGamesPerMatch;
+                                 Math.random = makeRandGenFromSeed(startSeed);
+                                 const N = CONFIG.numberOfGamesPerMatch;
                                   setOfMatches:
                                    for (let game = 1; game <= N; game++) {
                                         if(game%2===0)resetConfigPiles(game);
@@ -291,7 +332,7 @@ let isPaused = false;
                                                           opponentPlayer.score += 1;
                                                           recordMatchResult(emailA, emailB, opponentEmail(state.turn), 0);
                                                            getMatchMatrixDisplay();
-                                                            broadcast({ type: "MATCH_UPDATE", players, matchMatrix: Matrix });
+                                                            broadcast({ type: "MATCH_UPDATE", players, matchMatrix: Matrix, winnerName: opponentPlayer.name });
                                                             continue setOfMatches; 
                                                      }
                                                       // Validate currentPlayer Move 
@@ -304,7 +345,7 @@ let isPaused = false;
                                                                opponentPlayer.score += 1; 
                                                                recordMatchResult(emailA, emailB, opponentEmail(state.turn), 0);
                                                                 getMatchMatrixDisplay();
-                                                                 broadcast({ type: "MATCH_UPDATE", players, matchMatrix: Matrix });
+                                                                 broadcast({ type: "MATCH_UPDATE", players, matchMatrix: Matrix, winnerName: opponentPlayer.name });
                                                                 continue setOfMatches; 
                                                           }
                                                                //Bonus time for making a valid quick move
@@ -314,7 +355,7 @@ let isPaused = false;
 
                                                                 // Apply Valid Move
                                                                 state.piles[move.pileIndex] -= move.count;
-                                                                 broadcast({ type: "MOVE", piles: state.piles, player: currentPlayer.name, bonus: bonusTime, movedFrom: move.pileIndex });
+                                                                 broadcast({ type: "MOVE", piles: state.piles, player: currentPlayer.name, count: move.count, bonus: bonusTime, movedFrom: move.pileIndex });
                                                                  await delay(100);
                                                                   //await new Promise(delayresolve => setTimeout(delayresolve, 500 /*ms*/)); // Slow down for dashboard viewers
                                                      
@@ -329,7 +370,7 @@ let isPaused = false;
                                              //opponentPlayer.timeBank = 0; // The loser of the match loses all remaining time for the next matches, while the winner keeps their remaining time as carry-over for their next matches. This rewards players who win quickly and penalizes those who lose or play inefficiently.
                                               recordMatchResult(emailA, emailB, winnerEmail, 0);
                                                getMatchMatrixDisplay();
-                                                broadcast({ type: "MATCH_UPDATE", players, matchMatrix: Matrix });
+                                                broadcast({ type: "MATCH_UPDATE", players, matchMatrix: Matrix, winnerName: players[winnerEmail].name });
                                                  await delay(2000);
 
                                                   
@@ -465,7 +506,7 @@ var Matrix = [];
                 async function delay(time) {
                                             await new Promise(delayresolve => setTimeout(delayresolve, time /*ms*/)); // Slow down for dashboard viewers
                 } 
-                function mulberry32(seed) {
+                function makeRandGenFromSeed(seed) { //mulberry32 is a simple fast PRNG with good enough randomness for our purposes, and it allows us to have reproducible random sequences by using a fixed seed. This is useful for generating the initial piles and forbidden moves in a consistent way across tournaments, which can be important for fairness and for testing purposes. By using a seeded PRNG, we can ensure that the same sequence of "random" configurations is generated each time we start the server with the same seed. 
                                             return function () {
                                                                 let t = seed += 0x6D2B79F5;
                                                                  t = Math.imul(t ^ (t >>> 15), t | 1);

@@ -9,6 +9,7 @@ const matchMatrixTable = document.getElementById('match-matrix');
 let playerList = [];
 let matchMatrix = [];
 let playerCount = 0;
+let myBotName = null; // Store this client's bot name after registration
 
     ///  Establish WebSocket connection to the server . Called when this page loaded  to be ready to receive real-time updates about the tournament and game state
     function connect() {
@@ -32,50 +33,96 @@ let playerCount = 0;
     }
 
 let consecutiveLogoEnters = 0;
-        ////----------for early contest start  by 3 consecutive mouse enters----------------------------------------------------
+let tournamentState = "not_started"; // States: not_started, running, paused, ended
+        ////----------for early contest start, pause/resume, or new contest by 3 consecutive mouse enters----------------------------------------------------
         function handleLogoHover() {
                                      consecutiveLogoEnters += 1;
                                       if (consecutiveLogoEnters === 3) {
                                           consecutiveLogoEnters = 0;
-                                           logEvent("🧠 Easter egg activated: requesting early tournament start!");
-                                           if (ws && ws.readyState === WebSocket.OPEN) {
-                                               ws.send(JSON.stringify({ type: "START_TOURNAMENT_REQUEST" }));
-                                                beginContestLayouts();
-                                           }
-                                           else {
-                                                 logEvent("❌ Failed to request early tournament start.");
-                                           }
+                                          
+                                          // If tournament is running -> pause
+                                          if (tournamentState === "running") {
+                                               logEvent("🧠 Easter egg activated: requesting pause!");
+                                               if (ws && ws.readyState === WebSocket.OPEN) {
+                                                   ws.send(JSON.stringify({ type: "PAUSE_TOURNAMENT_REQUEST" }));
+                                               }
+                                               else {
+                                                     logEvent("❌ Failed to request pause.");
+                                               }
+                                          }
+                                          // If tournament is paused -> resume
+                                          else if (tournamentState === "paused") {
+                                               logEvent("🧠 Easter egg activated: requesting resume!");
+                                               if (ws && ws.readyState === WebSocket.OPEN) {
+                                                   ws.send(JSON.stringify({ type: "RESUME_TOURNAMENT_REQUEST" }));
+                                               }
+                                               else {
+                                                     logEvent("❌ Failed to request resume.");
+                                               }
+                                          }
+                                          // If tournament is ended -> start new contest
+                                          else if (tournamentState === "ended") {
+                                               logEvent("🧠 Easter egg activated: requesting new contest!");
+                                               if (ws && ws.readyState === WebSocket.OPEN) {
+                                                   ws.send(JSON.stringify({ type: "NEW_TOURNAMENT_REQUEST" }));
+                                               }
+                                               else {
+                                                     logEvent("❌ Failed to request new contest.");
+                                               }
+                                          }
+                                          // Before tournament starts -> early start
+                                          else {
+                                               logEvent("🧠 Easter egg activated: requesting early tournament start!");
+                                               if (ws && ws.readyState === WebSocket.OPEN) {
+                                                   ws.send(JSON.stringify({ type: "START_TOURNAMENT_REQUEST" }));
+                                                    beginContestLayouts();
+                                               }
+                                               else {
+                                                     logEvent("❌ Failed to request early tournament start.");
+                                               }
+                                          }
                                      }
         }         
 
-        ////------------called when user clicks "Register" button, sends registration data to server and shows dashboard on success ----------------------
-        async function register() {
+        ////------------called when user clicks "Register" button, sends registration data to server via WebSocket and shows dashboard on success ----------------------
+        function register() {
                                     const payload = {
+                                                     type: 'REGISTER_PLAYER',
                                                      email: document.getElementById('email').value,
                                                      name:  document.getElementById('avatar-name').value,
                                                      code:  document.getElementById('bot-code').value
                                                     };
-        
-                                            const response = await fetch('/register', {
-                                                                                 method: 'POST',
-                                                                                 headers: { 'Content-Type': 'application/json' },
-                                                                                 body: JSON.stringify(payload)
-                                                                               });
-                                 
-                                                if (response.ok) { // Registration successful, switch to tournament dashboard view
-                                                                  regView.classList.add('hidden');
-                                                                  dashView.classList.remove('hidden');
-                                                                 }
-                                                else    alert(`Registration failed. ${await response.text()}`);
+                                     if (ws && ws.readyState === WebSocket.OPEN) {
+                                         ws.send(JSON.stringify(payload));
+                                     }
+                                     else {
+                                           alert('WebSocket connection is not established');
+                                     }
                                            
         }
 
 var currenConfig = null;
+let deadlineStartTime = null; // Will be calculated from delta when received from server
+let clientRegistrationTime = null; // Client's local time when delta was received from server
+
         // Handle incoming messages from Game server  (events by web socket protocol ), called as callback from WebSocket.onmessage handle in connect() function -----------------------------------------
         function handleServerEvent(data) {
-                                          if (data.type === "START_TIME") {
-                                                                           setDeadline(data.startTime);
+                                          if (data.type === "START_TIME_DELTA") {
+                                                                           setDeadlineFromDelta(data.delta);
                                                                             return;
+                                          }
+                                          
+                                          if (data.type === "REGISTRATION_SUCCESS") {
+                                                                                myBotName = document.getElementById('avatar-name').value;
+                                                                                logEvent(`✅ ${data.message}`);
+                                                                                regView.classList.add('hidden');
+                                                                                dashView.classList.remove('hidden');
+                                                                                 return;
+                                          }
+                                          
+                                          if (data.type === "REGISTRATION_ERROR") {
+                                                                                     alert(`Registration failed. ${data.message}`);
+                                                                                      return;
                                           }
         
                                               if (data.type === "TOURNAMENT_STARTED") {
@@ -90,6 +137,7 @@ var currenConfig = null;
                                                                                           
                                                                                           data.config && logEvent(`Tournament configuration: ${JSON.stringify(data.config)}`);
                                                                                            currenConfig = data.config;
+                                                                                           tournamentState = "running";
     
                                                                                            beginContestLayouts();
                                               }
@@ -97,43 +145,79 @@ var currenConfig = null;
                                               if (data.type === "NEW_PLAYER") {
                                                                                 logEvent(`New Challenger: ${data.name} has joined!`);
                                               }
-                                          
-                                              if (data.type === "CURRENT_FIGHT") {
-                                                                                  currenConfig = data.config;
-                                                                                  if (currentFightText) 
-                                                                                      currentFightText.innerText = `Current fight: ${data.fight.playerA} vs ${data.fight.playerB} — round ${data.fight.game} of ${data.fight.totalGames}`;
-                                                                                  
-                                                                                  logEvent(`Current fight: ${data.fight.playerA} vs ${data.fight.playerB}`);
-                                              }
-                                          
-                                              if (data.type === "MATCH_UPDATE") {
-                                                                                  updateLeaderboard(data);
-                                              }
-                                          
-                                              if (data.type === "MOVE") {
-                                                                         updatePiles(data);
-                                                                         logEvent(`${data.player} moves to state: ${data.piles}, bonus: ${data.bonus}ms`);
-                                              } 
-                                              if (data.type === "DISQUALIFIED_FOR_INVALID_MOVE") {
-                                                                                                  updatePiles(data);
-                                                                                                  logEvent(`${data.player} tried to make an 💥 invalid  move ${data.invalidMove} and is looser!`);
-                                              } 
-                                              if (data.type === "DISQUALIFIED_FOR_ERROR") {
-                                                                                           //updatePiles(data.piles);
-                                                                                           logEvent(`${data.player}  made ❌ error: ${data.error} while trying to make move  and is looser!`);
-                                              } 
                                               
-                                          
+                                              if (data.type === "CONTEST_PAUSED") {
+                                                                                  tournamentState = "paused";
+                                                                                  if (deadlineText) 
+                                                                                      deadlineText.innerText = "Current Contest paused";
+                                                                                  logEvent("⏸️  CONTEST PAUSED");
+                                              }
+                                              
+                                              if (data.type === "CONTEST_RESUMED") {
+                                                                                  tournamentState = "running";
+                                                                                  if (deadlineText) 
+                                                                                      deadlineText.innerText = "Current Contest resumed";
+                                                                                  logEvent("▶️  CONTEST RESUMED");
+                                              }
+                                              
                                               if (data.type === "END") {
-                                                                         updateLeaderboard(data)
+                                                                         tournamentState = "ended";
+                                                                         updateLeaderboard(data);
+                                                                         if (deadlineText) 
+                                                                             deadlineText.innerText = "Current Contest ended now";
                                                                          logEvent("🏆 TOURNAMENT OVER!");
+                                              }
+                                              
+                                              if (data.type === "NEW_CONTEST_BEGINS") {
+                                                                                  tournamentState = "not_started";
+                                                                                  if (deadlineText) 
+                                                                                      deadlineText.innerText = "New Contest begins";
+                                                                                  playerList = data.players;
+                                                                                  playerCount = playerList.length;
+                                                                                  matchMatrix = data.matchMatrix;
+                                                                                  renderMatchMatrix(matchMatrix, playerList);
+                                                                                  currenConfig = data.config;
+                                                                                  logEvent("🎊 NEW CONTEST STARTS!");
+                                              }
+                                              
+                                              if (data.type === "CURRENT_FIGHT") {
+                                                                                  const fight = data.fight;
+                                                                                  currentFightText.innerHTML = `⚔️ <strong>${fight.playerA}</strong> vs <strong>${fight.playerB}</strong> (Game ${fight.game}/${fight.totalGames})`;
+                                              }
+                                              
+                                              if (data.type === "MOVE") {
+                                                                        updatePiles(data);
+                                                                        logEvent(`${data.player} took ${data.count} coins (bonus: +${data.bonus}ms)`);
+                                              }
+                                              
+                                              if (data.type === "MATCH_UPDATE") {
+                                                                         updateLeaderboard(data);
+                                                                         logEvent(`✅ Match update received - Winner is ${data.winnerName}`);
+                                              }
+                                              
+                                              if (data.type === "DISQUALIFIED_FOR_ERROR") {
+                                                                                        logEvent(`❌ ${data.player} DISQUALIFIED for error: ${data.error}`);
+                                              }
+                                              
+                                              if (data.type === "DISQUALIFIED_FOR_INVALID_MOVE") {
+                                                                                             logEvent(`❌ ${data.player} DISQUALIFIED for invalid move: ${JSON.stringify(data.invalidMove)}`);
                                               }
 
         }
 
 // Countdown timer for tournament start
 var countdownInterval=null;
-            // Function to set the tournament start deadline and initialize the countdown timer
+            // Function to set the tournament start deadline from time delta (milliseconds until tournament starts)
+            function setDeadlineFromDelta(delta) {
+                                                  clientRegistrationTime = Date.now(); // Record client's local time when delta was received
+                                                  deadlineStartTime = clientRegistrationTime + delta; // Calculate tournament start time based on delta
+                                                   if (countdownInterval)clearInterval(countdownInterval);
+                                                   
+                                                    updateDeadlineTimer();
+                                                     countdownInterval = setInterval(updateDeadlineTimer, 1000);
+            }
+            
+            // Legacy function for backwards compatibility (if needed)
             function setDeadline(startTimeValue) {
                                                   deadlineStartTime = new Date(startTimeValue);
                                                    if (countdownInterval)clearInterval(countdownInterval);
@@ -174,6 +258,11 @@ var countdownInterval=null;
                         }
                         if (deadlineText) {
                                            deadlineText.innerText = "Contest starting now!";
+                        }
+                        // Update "Live Battle" header with client's bot name
+                        const liveBattleHeader = document.querySelector('.arena h2');
+                        if (liveBattleHeader && myBotName) {
+                            liveBattleHeader.innerHTML = `Live Battle - You are <strong>${myBotName}</strong>`;
                         }
                         logEvent("🏁 Contest begins!");
                     }
