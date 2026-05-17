@@ -42,7 +42,7 @@ let tournamentState = "not_started"; // States: not_started, running, paused, en
                                           
                                           // If tournament is running -> pause
                                           if (tournamentState === "running") {
-                                               logEvent("🧠 Easter egg activated: requesting pause!");
+                                               logEvent("🧠: requesting pause!");
                                                if (ws && ws.readyState === WebSocket.OPEN) {
                                                    ws.send(JSON.stringify({ type: "PAUSE_TOURNAMENT_REQUEST" }));
                                                }
@@ -52,7 +52,7 @@ let tournamentState = "not_started"; // States: not_started, running, paused, en
                                           }
                                           // If tournament is paused -> resume
                                           else if (tournamentState === "paused") {
-                                               logEvent("🧠 Easter egg activated: requesting resume!");
+                                               logEvent("🧠: requesting resume!");
                                                if (ws && ws.readyState === WebSocket.OPEN) {
                                                    ws.send(JSON.stringify({ type: "RESUME_TOURNAMENT_REQUEST" }));
                                                }
@@ -62,7 +62,7 @@ let tournamentState = "not_started"; // States: not_started, running, paused, en
                                           }
                                           // If tournament is ended -> start new contest
                                           else if (tournamentState === "ended") {
-                                               logEvent("🧠 Easter egg activated: requesting new contest!");
+                                               logEvent("🧠: requesting new contest!");
                                                if (ws && ws.readyState === WebSocket.OPEN) {
                                                    ws.send(JSON.stringify({ type: "NEW_TOURNAMENT_REQUEST" }));
                                                }
@@ -72,7 +72,7 @@ let tournamentState = "not_started"; // States: not_started, running, paused, en
                                           }
                                           // Before tournament starts -> early start
                                           else {
-                                               logEvent("🧠 Easter egg activated: requesting early tournament start!");
+                                               logEvent("🧠: requesting early tournament start!");
                                                if (ws && ws.readyState === WebSocket.OPEN) {
                                                    ws.send(JSON.stringify({ type: "START_TOURNAMENT_REQUEST" }));
                                                     beginContestLayouts();
@@ -182,12 +182,12 @@ let clientRegistrationTime = null; // Client's local time when delta was receive
                                               
                                               if (data.type === "CURRENT_FIGHT") {
                                                                                   const fight = data.fight;
-                                                                                  currentFightText.innerHTML = `⚔️ <strong>${fight.playerA}</strong> vs <strong>${fight.playerB}</strong> (Game ${fight.game}/${fight.totalGames})`;
+                                                                                   currentFightText.innerHTML = `⚔️ <strong>${fight.playerA}</strong> vs <strong>${fight.playerB}</strong> (Game ${fight.game}/${fight.totalGames})`;
                                               }
                                               
                                               if (data.type === "MOVE") {
                                                                         updatePiles(data);
-                                                                        logEvent(`${data.player} took ${data.count} coins (bonus: +${data.bonus}ms)`);
+                                                                         logEvent(`${data.player} took ${data.count} coins, now state is ${data.piles}, (bonus: +${data.bonus}ms)`);
                                               }
                                               
                                               if (data.type === "MATCH_UPDATE") {

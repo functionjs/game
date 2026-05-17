@@ -1261,4 +1261,145 @@
     "maxCodeSize": 4096,
     "numberOfGamesPerMatch": 10
   }
+}{
+  "id": "t_1779047829328",
+  "date": "2026-05-17T19:57:09.328Z",
+  "players": {
+    "a.maximov@onu.edu.ua": {
+      "idx": 0,
+      "name": "🤖",
+      "code": " // piles:     array of integers  (coins) representing the current state of the game\n // forbidden: array of forbidden moves\n // context:   { mode: CONFIG.mode, timeRemaining: player.timeBank } \n //                    CONFIG.mode can be \"NORMAL\" or \"GIVEAWAY\" (see rules for details)\n //OUTPUTS: Return an object { pileIndex: target, count: N };\n //For example { pileIndex: 0, count: 1 } represents Bot's  want to take 1 coin from pile 0 \n \n function play(piles, forbidden, context) {\n                                          // TO DO \n                                          const target = piles.findIndex(p => p > 0);\n                                           if(piles[target]== 1) N = 1;\n                                           else                  N = 2;\n                                            return { pileIndex: target, count: N }; \n }\n          ",
+      "timeBank": 10,
+      "score": 0,
+      "status": "READY"
+    },
+    "a.maximov1@onu.edu.ua": {
+      "idx": 1,
+      "name": "🤡",
+      "code": " // piles:     array of integers  (coins) representing the current state of the game\n // forbidden: array of forbidden moves\n // context:   { mode: CONFIG.mode, timeRemaining: player.timeBank } \n //                    CONFIG.mode can be \"NORMAL\" or \"GIVEAWAY\" (see rules for details)\n //OUTPUTS: Return an object { pileIndex: target, count: N };\n //For example { pileIndex: 0, count: 1 } represents Bot's  want to take 1 coin from pile 0 \n \n function play(piles, forbidden, context) {\n                                          // TO DO \n                                          const target = piles.findIndex(p => p > 0);\n                                           if(piles[target]== 1) N = 1;\n                                           else                  N = 1;\n                                            return { pileIndex: target, count: N }; \n }\n          ",
+      "timeBank": 10,
+      "score": 0,
+      "status": "READY"
+    },
+    "a.maximov2@onu.edu.ua": {
+      "idx": 2,
+      "name": "☃️",
+      "code": " // piles:     array of integers  (coins) representing the current state of the game\n // forbidden: array of forbidden moves\n // context:   { mode: CONFIG.mode, timeRemaining: player.timeBank } \n //                    CONFIG.mode can be \"NORMAL\" or \"GIVEAWAY\" (see rules for details)\n //OUTPUTS: Return an object { pileIndex: target, count: N };\n //For example { pileIndex: 0, count: 1 } represents Bot's  want to take 1 coin from pile 0 \n \n function play(piles, forbidden, context) {\n                                          // TO DO \n                                          const target = piles.findIndex(p => p > 0);\n                                           if(piles[target]>2) N = piles[target];\n                                           else                N = 1;\n                                            return { pileIndex: target, count: N }; \n }\n          ",
+      "timeBank": 10,
+      "score": 0,
+      "status": "READY"
+    }
+  }
+}{
+  "players": {
+    "a.maximov@onu.edu.ua": {
+      "idx": 0,
+      "name": "🤖",
+      "code": " // piles:     array of integers  (coins) representing the current state of the game\n // forbidden: array of forbidden moves\n // context:   { mode: CONFIG.mode, timeRemaining: player.timeBank } \n //                    CONFIG.mode can be \"NORMAL\" or \"GIVEAWAY\" (see rules for details)\n //OUTPUTS: Return an object { pileIndex: target, count: N };\n //For example { pileIndex: 0, count: 1 } represents Bot's  want to take 1 coin from pile 0 \n \n function play(piles, forbidden, context) {\n                                          // TO DO \n                                          const target = piles.findIndex(p => p > 0);\n                                           if(piles[target]== 1) N = 1;\n                                           else                  N = 2;\n                                            return { pileIndex: target, count: N }; \n }\n          ",
+      "timeBank": 1260,
+      "score": 8,
+      "status": "READY"
+    },
+    "a.maximov1@onu.edu.ua": {
+      "idx": 1,
+      "name": "🤡",
+      "code": " // piles:     array of integers  (coins) representing the current state of the game\n // forbidden: array of forbidden moves\n // context:   { mode: CONFIG.mode, timeRemaining: player.timeBank } \n //                    CONFIG.mode can be \"NORMAL\" or \"GIVEAWAY\" (see rules for details)\n //OUTPUTS: Return an object { pileIndex: target, count: N };\n //For example { pileIndex: 0, count: 1 } represents Bot's  want to take 1 coin from pile 0 \n \n function play(piles, forbidden, context) {\n                                          // TO DO \n                                          const target = piles.findIndex(p => p > 0);\n                                           if(piles[target]== 1) N = 1;\n                                           else                  N = 1;\n                                            return { pileIndex: target, count: N }; \n }\n          ",
+      "timeBank": 1174,
+      "score": 10,
+      "status": "READY"
+    },
+    "a.maximov2@onu.edu.ua": {
+      "idx": 2,
+      "name": "☃️",
+      "code": " // piles:     array of integers  (coins) representing the current state of the game\n // forbidden: array of forbidden moves\n // context:   { mode: CONFIG.mode, timeRemaining: player.timeBank } \n //                    CONFIG.mode can be \"NORMAL\" or \"GIVEAWAY\" (see rules for details)\n //OUTPUTS: Return an object { pileIndex: target, count: N };\n //For example { pileIndex: 0, count: 1 } represents Bot's  want to take 1 coin from pile 0 \n \n function play(piles, forbidden, context) {\n                                          // TO DO \n                                          const target = piles.findIndex(p => p > 0);\n                                           if(piles[target]>2) N = piles[target];\n                                           else                N = 1;\n                                            return { pileIndex: target, count: N }; \n }\n          ",
+      "timeBank": 375,
+      "score": 12,
+      "status": "READY"
+    }
+  },
+  "currentTournamentId": "t_1779047829328",
+  "Matrix": [
+    [
+      {
+        "winsA": 0,
+        "winsB": 0,
+        "bonusA": 0,
+        "bonusB": 0
+      },
+      {
+        "winsA": 5,
+        "winsB": 5,
+        "bonusA": 0,
+        "bonusB": 0
+      },
+      {
+        "winsA": 3,
+        "winsB": 7,
+        "bonusA": 0,
+        "bonusB": 0
+      }
+    ],
+    [
+      {
+        "winsA": 5,
+        "winsB": 5,
+        "bonusA": 0,
+        "bonusB": 0
+      },
+      {
+        "winsA": 0,
+        "winsB": 0,
+        "bonusA": 0,
+        "bonusB": 0
+      },
+      {
+        "winsA": 4,
+        "winsB": 6,
+        "bonusA": 0,
+        "bonusB": 0
+      }
+    ],
+    [
+      {
+        "winsA": 7,
+        "winsB": 3,
+        "bonusA": 0,
+        "bonusB": 0
+      },
+      {
+        "winsA": 6,
+        "winsB": 4,
+        "bonusA": 0,
+        "bonusB": 0
+      },
+      {
+        "winsA": 0,
+        "winsB": 0,
+        "bonusA": 0,
+        "bonusB": 0
+      }
+    ]
+  ],
+  "CONFIG": {
+    "mode": "NORMAL",
+    "piles": [
+      10,
+      3,
+      6,
+      2,
+      4,
+      4,
+      7,
+      3,
+      10,
+      5
+    ],
+    "forbidden": [
+      3,
+      5
+    ],
+    "baseTime": 10,
+    "maxCodeSize": 4096,
+    "numberOfGamesPerMatch": 10
+  }
 }
