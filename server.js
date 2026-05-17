@@ -159,7 +159,8 @@ var CONFIG = {
                maxCodeSize: 4096, // bytes
                numberOfGamesPerMatch: 10 // Number of games each pair of Bots will play against each other
 };
-Math.random = mulberry32(12345);// Seeded random number generator for reproducibility of pile configurations and forbidden moves across tournaments
+var randSeed = 12345; // Fixed seed for reproducibility of pile configurations and forbidden moves across tournaments
+               Math.random = mulberry32(randSeed);// Seeded random number generator for reproducibility of pile configurations and forbidden moves across tournaments
    function resetConfigPiles(accountsNumber) {
                                  //let accountsNumber = Math.floor(Math.random() * 5) + 3; // Random number of accounts between 3 and 7
                                   let piles = []; 

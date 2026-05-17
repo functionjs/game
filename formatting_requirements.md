@@ -107,3 +107,12 @@ When generating or analyzing code under **Dyuk Style**, follow these verificatio
 :::info
 **Goal:** Simplicity of rules for simultaneous human/AI readability and rapid error detection in large volumes of generated code.
 :::
+
+## Deep Analysis of the "Dyuk Style" as an AI Prompt
+By implementing this style, you transform your IDE from a text editor into a **Logic Analyzer**:
+
+1.  **Structural Integrity:** AI-generated code is often "flat." Dyuk Style forces the AI to output the structure of its own logic. If the AI cannot maintain the correct indentation, it often indicates a flaw in its logical understanding of the variable scope.
+2.  **The "Gantt" Effect:** In a standard JavaScript file, you cannot tell if `const a = b + c` is related to the code 10 lines above without reading it. In Dyuk Style, if that line is flush with the code 10 lines above, you *know* it is independent. If it is indented 10 spaces deeper, you know it is the end of a long calculation chain.
+3.  **Error Detection:** This style makes "Dead Code" or "Logic Leaks" visible. If a variable is declared but the following lines don't indent, those lines aren't using that data.
+4.  **Reviewing "Piles" of Code:** When an AI agent generates a 200-line script, you can scan the left margin. The "peaks" (flush left) are your entry points, and the "valleys" (indented code) are the implementation details.
+git
