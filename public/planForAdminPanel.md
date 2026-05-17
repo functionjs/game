@@ -1,23 +1,3 @@
-I'll help you create an admin panel! Let me first understand your current setup and then ask some clarifying questions.    
-
-Read [](file:///workspaces/game/server.js#1-1), lines 1 to 100
-
-Read [](file:///workspaces/game/public/script.js#1-1), lines 1 to 50
-
-Read [](file:///workspaces/game/public/style.css#1-1), lines 1 to 50
-
-Read [](file:///workspaces/game/package.json)
-
-Let me read more of the server.js to understand the full structure: 
-
-Read [](file:///workspaces/game/server.js#100-100), lines 100 to 250
-
-Now I understand the structure! Before implementing the admin panel, let me ask some clarifying questions: 
-
-Анализ ответов...
-
-Perfect! Here's my implementation plan:
-
 ## Plan for Admin Panel
 
 ### Files to Create/Modify:
