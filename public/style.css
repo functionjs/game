@@ -95,6 +95,13 @@ button {
     border-radius: 12px;
     color: #c4fff9;
     font-weight: 600;
+    transform-origin: 0% 100%;
+    transition: transform 2000ms ease, box-shadow 2000ms ease;
+}
+.current-fight:hover {
+    transform-origin: 0% 100%;
+    transform: scale(2);
+    box-shadow: 0 0 18px rgba(142, 246, 228, 0.4);
 }
 
 .player-list {
@@ -147,9 +154,11 @@ button {
     justify-content: space-around;
     font-size: 1rem;
     padding: 10px 0;
+    transform-origin: 0% 50%;
     transition: transform 2000ms ease, box-shadow 2000ms ease;
 }
 #piles-display:hover {
+                       transform-origin: 0% 50%;
                        transform: scale(2);
                        box-shadow: 0 0 18px rgba(142, 246, 228, 0.4);
 }
@@ -160,9 +169,11 @@ button {
     background: rgba(0,0,0,0.2);
     padding: 10px;
     font-size: 0.9rem;
+    transform-origin: 0% 100%;
     transition: transform 2000ms ease, box-shadow 2000ms ease;
 }
 #game-log:hover {
+                 transform-origin: 0% 100%;
                  transform: scale(2);
                  box-shadow: 0 0 18px rgba(142, 246, 228, 0.4);
 }
@@ -184,3 +195,262 @@ button {
                         text-align: center;
                         /*font-size: 0.9rem;*/
                       }
+
+
+/* ===== ADMIN PANEL STYLES ===== */
+
+.admin-login-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+}
+
+.admin-login-form {
+    width: 100%;
+    max-width: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+#admin-password {
+    padding: 12px;
+    font-size: 1em;
+    border-radius: 5px;
+}
+
+.admin-panel-container {
+    max-width: 1200px;
+}
+
+.admin-panel-container h1 {
+    color: #00ffcc;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.admin-section {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 20px;
+    margin: 15px 0;
+    border-radius: 12px;
+    border: 1px solid #0f3460;
+}
+
+.admin-section h3 {
+    color: #8ef6e4;
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+}
+
+.countdown-display {
+    font-size: 2.5rem;
+    color: #00ffcc;
+    text-align: center;
+    font-weight: bold;
+    padding: 20px;
+    background: rgba(0, 255, 204, 0.1);
+    border-radius: 10px;
+    margin: 15px 0;
+    font-family: 'Courier New', monospace;
+}
+
+.admin-player-list {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #0f3460;
+    border-radius: 8px;
+    padding: 10px;
+}
+
+.admin-players-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.admin-players-table thead {
+    background: rgba(0, 255, 204, 0.15);
+    border-bottom: 2px solid #0f3460;
+}
+
+.admin-players-table th {
+    padding: 12px;
+    text-align: left;
+    color: #00ffcc;
+    font-weight: bold;
+    border-right: 1px solid #0f3460;
+}
+
+.admin-players-table th:last-child {
+    border-right: none;
+}
+
+.admin-players-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(15, 52, 96, 0.5);
+    color: #d9fff7;
+}
+
+.admin-players-table tbody tr:hover {
+    background: rgba(0, 255, 204, 0.05);
+}
+
+.admin-players-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.admin-player-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    margin: 8px 0;
+    background: rgba(0, 255, 204, 0.08);
+    border-left: 3px solid #00ffcc;
+    border-radius: 5px;
+}
+
+.player-info {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    flex: 1;
+}
+
+.player-info strong {
+    color: #00ffcc;
+}
+
+.player-meta {
+    font-size: 0.85rem;
+    color: #999;
+}
+
+.player-status {
+    display: inline-block;
+    padding: 3px 8px;
+    background: #00ffcc;
+    color: #1a1a2e;
+    border-radius: 3px;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.config-editor {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 15px;
+    border-radius: 8px;
+}
+
+.config-group {
+    margin-bottom: 15px;
+}
+
+.config-group label {
+    display: block;
+    margin-bottom: 5px;
+    color: #8ef6e4;
+    font-weight: 600;
+}
+
+.config-group input {
+    width: 100%;
+    padding: 10px;
+    box-sizing: border-box;
+    font-size: 1em;
+    border-radius: 5px;
+}
+
+#bot-code-display {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid #0f3460;
+    padding: 15px;
+    border-radius: 8px;
+    max-height: 500px;
+    overflow-y: auto;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.status-box {
+    background: rgba(0, 255, 204, 0.08);
+    border-left: 4px solid #00ffcc;
+    padding: 15px;
+    border-radius: 5px;
+}
+
+.status-box p {
+    margin: 8px 0;
+    color: #d9fff7;
+}
+
+.status-box strong {
+    color: #00ffcc;
+}
+
+/* Admin Control Buttons */
+.btn-start, .btn-pause, .btn-resume, .btn-new, .btn-config, .btn-logout {
+    margin: 5px;
+    padding: 12px 20px;
+    border-radius: 5px;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    color: white;
+    transition: all 0.3s ease;
+}
+
+.btn-start {
+    background: #00cc88;
+}
+
+.btn-start:hover {
+    background: #00ff99;
+}
+
+.btn-pause {
+    background: #ffaa00;
+}
+
+.btn-pause:hover {
+    background: #ffbb11;
+}
+
+.btn-resume {
+    background: #0088ff;
+}
+
+.btn-resume:hover {
+    background: #0099ff;
+}
+
+.btn-new {
+    background: #ff6b6b;
+}
+
+.btn-new:hover {
+    background: #ff7777;
+}
+
+.btn-config {
+    background: #00ffcc;
+    color: #1a1a2e;
+}
+
+.btn-config:hover {
+    background: #00ffdd;
+}
+
+.btn-logout {
+    width: 100%;
+    max-width: 200px;
+    margin-left: auto;
+    margin-right: auto;
+    display: block;
+}

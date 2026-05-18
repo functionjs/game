@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tournament Admin Panel</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="admin-login-view" class="card admin-login-container">
+        <h2>Admin Panel - Login</h2>
+        <div class="admin-login-form">
+            <input type="password" id="admin-password" placeholder="Enter admin password" />
+            <button onclick="authenticateAdmin()">Login</button>
+            <p id="login-error" style="color: #e94560; margin-top: 10px;"></p>
+        </div>
+    </div>
+
+    <div id="admin-panel-view" class="hidden card admin-panel-container">
+        <h1>⚙️ Tournament Admin Panel</h1>
+        
+        <!-- Countdown Timer -->
+        <div class="admin-section">
+            <h3>Tournament Start Countdown</h3>
+            <div class="countdown-display" id="countdown-timer">Loading...</div>
+            <div style="margin-top: 10px;">
+                <button onclick="manualStartTournament()" class="btn-start">🚀 Start Tournament</button>
+                <button onclick="pauseTournament()" class="btn-pause">⏸ Pause</button>
+                <button onclick="resumeTournament()" class="btn-resume">▶ Resume</button>
+                <button onclick="newTournament()" class="btn-new">🔄 New Tournament</button>
+            </div>
+        </div>
+
+        <!-- Player Registration List -->
+        <div class="admin-section">
+            <h3>Registered Players</h3>
+            <table id="admin-players-table" class="admin-players-table">
+                <thead>
+                    <tr>
+                        <th>Email</th>
+                        <th>Bot Name</th>
+                        <th>Registration Time</th>
+                        <th>Connection Status</th>
+                    </tr>
+                </thead>
+                <tbody id="players-table-body">
+                    <tr><td colspan="4" style="text-align: center; color: #999;">No players registered yet</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Configuration Editor -->
+        <div class="admin-section">
+            <h3>Game Configuration</h3>
+            <div class="config-editor">
+                <div class="config-group">
+                    <label>Piles (comma-separated):</label>
+                    <input type="text" id="config-piles" placeholder="e.g., 3,5,7" />
+                </div>
+                <div class="config-group">
+                    <label>Forbidden Moves (comma-separated):</label>
+                    <input type="text" id="config-forbidden" placeholder="e.g., 2,4" />
+                </div>
+                <div class="config-group">
+                    <label>Base Time (ms):</label>
+                    <input type="number" id="config-baseTime" placeholder="10" />
+                </div>
+                <button onclick="updateConfiguration()" class="btn-config">💾 Update Config</button>
+            </div>
+        </div>
+
+        <!-- Bot Code Viewer -->
+        <div class="admin-section">
+            <h3>View Bot Code</h3>
+            <select id="player-code-select" onchange="showBotCode()" style="width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 5px; background: linear-gradient(rgb(0, 0, 180), rgb(0,0,48)); color: #00ffcc; border: none;">
+                <option value="">Select a player to view code...</option>
+            </select>
+            <pre id="bot-code-display" style="display: none;"></pre>
+        </div>
+
+        <!-- Status Information -->
+        <div class="admin-section">
+            <h3>Tournament Status</h3>
+            <div id="status-info" class="status-box">
+                <p><strong>Status:</strong> <span id="tournament-status">Waiting to start...</span></p>
+                <p><strong>Total Players:</strong> <span id="player-count">0</span></p>
+                <p><strong>Connection:</strong> <span id="connection-status" style="color: #999;">Disconnected</span></p>
+            </div>
+        </div>
+
+        <button onclick="logout()" class="btn-logout" style="margin-top: 20px; background: #666;">🚪 Logout</button>
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+</html>

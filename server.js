@@ -16,11 +16,19 @@ const    wss = new WebSocketServer({ server }); // WebSocket server for real-tim
         app.use(express.static('public')); // Serves your index.html
 
          // --- ROUTES ---
+         // Admin panel route
+         app.get('/admin', (req, res) => {
+             res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+         });
+         
          // Player registration is now handled via WebSocket messages (type: "REGISTER_PLAYER")
          // See the WebSocket message handler below for the registration logic
          
 var playersNumber = 0;
 var players = {};
+var adminClients = new Set(); // Track authenticated admin WebSocket connections
+var clientEmailMap = new Map(); // Map from WebSocket client to player email
+var emailToClientMap = new Map(); // Map from player email to WebSocket client
                   // Refactored: Registration logic moved to WebSocket handler below
          
          
@@ -62,6 +70,80 @@ const DEFAULT_START_DELAY_MS = 15 * 60 * 1000; // 15 minutes after server start
                                       try {
                                           let data = JSON.parse(message);
                                           
+                                          // Handle admin authentication
+                                          if (data.type === "ADMIN_AUTH") {
+                                              adminClients.add(ws);
+                                              console.log("Admin client authenticated");
+                                              ws.send(JSON.stringify({ 
+                                                  type: "ADMIN_AUTH_SUCCESS",
+                                                  players,
+                                                  tournamentStarted,
+                                                  tournamentStartTime,
+                                                  config: CONFIG
+                                              }));
+                                              return;
+                                          }
+
+                                          // Handle admin commands
+                                          if (adminClients.has(ws)) {
+                                              if (data.type === "ADMIN_START") {
+                                                  console.log("Admin requested tournament start");
+                                                  if (!tournamentStarted) {
+                                                      if (startTimeout) {
+                                                          clearTimeout(startTimeout);
+                                                          startTimeout = null;
+                                                      }
+                                                      startChampionship();
+                                                  }
+                                                  return;
+                                              }
+                                              else if (data.type === "ADMIN_PAUSE") {
+                                                  console.log("Admin requested tournament pause");
+                                                  if (tournamentStarted && !isPaused) {
+                                                      isPaused = true;
+                                                      broadcast({ type: "CONTEST_PAUSED" });
+                                                  }
+                                                  return;
+                                              }
+                                              else if (data.type === "ADMIN_RESUME") {
+                                                  console.log("Admin requested tournament resume");
+                                                  if (tournamentStarted && isPaused) {
+                                                      isPaused = false;
+                                                      broadcast({ type: "CONTEST_RESUMED" });
+                                                  }
+                                                  return;
+                                              }
+                                              else if (data.type === "ADMIN_NEW_TOURNAMENT") {
+                                                  console.log("Admin requested new tournament");
+                                                  if (!tournamentStarted) {
+                                                      playersNumber = 0;
+                                                      players = {};
+                                                      matchMatrix = {};
+                                                      Matrix = [];
+                                                      clientEmailMap.clear();
+                                                      emailToClientMap.clear();
+                                                      if (startTimeout) {
+                                                          clearTimeout(startTimeout);
+                                                      }
+                                                      tournamentStartTime = Date.now() + DEFAULT_START_DELAY_MS;
+                                                      console.log(`New tournament scheduled to start at ${new Date(tournamentStartTime).toLocaleString()}`);
+                                                      startTimeout = setTimeout(startChampionship, DEFAULT_START_DELAY_MS);
+                                                      broadcast({ type: "START_TIME_DELTA", delta: DEFAULT_START_DELAY_MS });
+                                                      broadcast({ type: "NEW_CONTEST_BEGINS", players: {}, matchMatrix: {}, config: CONFIG });
+                                                  }
+                                                  return;
+                                              }
+                                              else if (data.type === "ADMIN_UPDATE_CONFIG") {
+                                                  console.log("Admin updating configuration:", data.config);
+                                                  if (data.config.piles) CONFIG.piles = data.config.piles;
+                                                  if (data.config.forbidden) CONFIG.forbidden = data.config.forbidden;
+                                                  if (data.config.baseTime) CONFIG.baseTime = data.config.baseTime;
+                                                  broadcast({ type: "CONFIG_UPDATED", config: CONFIG });
+                                                  ws.send(JSON.stringify({ type: "ADMIN_CONFIG_UPDATED" }));
+                                                  return;
+                                              }
+                                          }
+                                          
                                            //for testing purposes, allow clients to request starting the tournament immediately instead of waiting for the scheduled time
                                            if (data.type === "START_TOURNAMENT_REQUEST") {
                                                console.log("Tournament start requested by a client.");
@@ -97,6 +179,8 @@ const DEFAULT_START_DELAY_MS = 15 * 60 * 1000; // 15 minutes after server start
                                                     playersNumber = 0;
                                                      players = {};
                                                      matchMatrix = {};
+                                                     clientEmailMap.clear();
+                                                     emailToClientMap.clear();
                                                      if (startTimeout) {
                                                          clearTimeout(startTimeout);
                                                           startTimeout = null;
@@ -113,12 +197,35 @@ const DEFAULT_START_DELAY_MS = 15 * 60 * 1000; // 15 minutes after server start
                                                    const { email, name, code } = data;
                                                     console.log(`beginning Registering player: ${name} (${email}) ...`);
 
-                                                    // Check for duplicate email registration
+                                                    // Check for duplicate email registration (allow reconnection before tournament starts)
                                                     if (players[email]) {
-                                                        let errmessage = `Player with email ${email} is already registered!!?`;
-                                                         console.log(errmessage);
-                                                         ws.send(JSON.stringify({ type: "REGISTRATION_ERROR", message: errmessage }));
-                                                          return;
+                                                        if (tournamentStarted) {
+                                                            let errmessage = `Player with email ${email} is already registered!!?`;
+                                                             console.log(errmessage);
+                                                             ws.send(JSON.stringify({ type: "REGISTRATION_ERROR", message: errmessage }));
+                                                              return;
+                                                        } else {
+                                                            // Allow reconnection - update the client reference
+                                                            console.log(`Player ${email} is reconnecting...`);
+                                                            const oldWs = emailToClientMap.get(email);
+                                                            if (oldWs) {
+                                                                clientEmailMap.delete(oldWs);
+                                                            }
+                                                            clientEmailMap.set(ws, email);
+                                                            emailToClientMap.set(email, ws);
+                                                            
+                                                            ws.send(JSON.stringify({ type: "REGISTRATION_SUCCESS", message: "Reconnected!" }));
+                                                            broadcast({ type: "NEW_PLAYER", name });
+                                                            
+                                                            // Notify admin about reconnection
+                                                            adminClients.forEach(adminWs => {
+                                                                adminWs.send(JSON.stringify({
+                                                                    type: "PLAYER_RECONNECTED",
+                                                                    email: email
+                                                                }));
+                                                            });
+                                                            return;
+                                                        }
                                                     }
                                                
                                                     // Validate code size
@@ -156,18 +263,36 @@ const DEFAULT_START_DELAY_MS = 15 * 60 * 1000; // 15 minutes after server start
                                                                     // else Register the player
                                                                      let idx = playersNumber;
                                                                       playersNumber++;
+                                                                      const registrationTime = Date.now();
                                                                       players[email] = {
                                                                           idx,
                                                                           name,
                                                                           code,
                                                                           timeBank: CONFIG.baseTime,
                                                                           score: 0,
-                                                                          status: "READY"
+                                                                          status: "READY",
+                                                                          registrationTime: registrationTime
                                                                       };
-                                                                       // Broadcast the new player to all connected clients
+                                                                      
+                                                                      // Track the client-to-email mapping for disconnection detection
+                                                                      clientEmailMap.set(ws, email);
+                                                                      emailToClientMap.set(email, ws);
+                                                                      
+                                                                      // Broadcast the new player to all connected clients
                                                                        console.log(`... Registered!  Total players: ${playersNumber}`);
                                                                        ws.send(JSON.stringify({ type: "REGISTRATION_SUCCESS", message: "Registered!" }));
                                                                         broadcast({ type: "NEW_PLAYER", name });
+                                                                        
+                                                                        // Send detailed registration info to admin clients
+                                                                        adminClients.forEach(adminWs => {
+                                                                            adminWs.send(JSON.stringify({
+                                                                                type: "PLAYER_REGISTERED",
+                                                                                email: email,
+                                                                                name: name,
+                                                                                registrationTime: registrationTime,
+                                                                                status: "connected"
+                                                                            }));
+                                                                        });
                                                         }
                                                         catch (err) {
                                                             let errmessage = `Error in Bot code for player: ${name} (${email}): ${err.message}`;
@@ -182,6 +307,30 @@ const DEFAULT_START_DELAY_MS = 15 * 60 * 1000; // 15 minutes after server start
                                                   }
                                     }
                        );
+
+                   // Handle client disconnect
+                   ws.on('close', () => {
+                       if (adminClients.has(ws)) {
+                           adminClients.delete(ws);
+                           console.log("Admin client disconnected");
+                       }
+                       
+                       // Check if this was a registered player
+                       const email = clientEmailMap.get(ws);
+                       if (email) {
+                           console.log(`Player ${email} disconnected`);
+                           clientEmailMap.delete(ws);
+                           emailToClientMap.delete(email);
+                           
+                           // Notify admin clients about the disconnection
+                           adminClients.forEach(adminWs => {
+                               adminWs.send(JSON.stringify({
+                                   type: "PLAYER_DISCONNECTED",
+                                   email: email
+                               }));
+                           });
+                       }
+                   });
                   }
           );
 

@@ -192,7 +192,7 @@ let clientRegistrationTime = null; // Client's local time when delta was receive
                                               
                                               if (data.type === "MATCH_UPDATE") {
                                                                          updateLeaderboard(data);
-                                                                         logEvent(`✅ Match update received - Winner is ${data.winnerName}`);
+                                                                         logEvent(`✅ Winner is ${data.winnerName}`);
                                               }
                                               
                                               if (data.type === "DISQUALIFIED_FOR_ERROR") {
