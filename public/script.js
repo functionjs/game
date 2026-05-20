@@ -26,63 +26,10 @@ let myBotName = null; // Store this client's bot name after registration
                           ws.onopen    = () => {
                                               document.getElementById('status-text').innerText = "Connected to Arena";
                                          };
-
-                                                                        //--------- Early contest start easter egg: listen for 3 consecutive mouse enters on the logo to trigger early tournament start request to server
-                          if (logo) logo.addEventListener('mouseenter', handleLogoHover);
                           
     }
 
-let consecutiveLogoEnters = 0;
-let tournamentState = "not_started"; // States: not_started, running, paused, ended
-        ////----------for early contest start, pause/resume, or new contest by 3 consecutive mouse enters----------------------------------------------------
-        function handleLogoHover() {
-                                     consecutiveLogoEnters += 1;
-                                      if (consecutiveLogoEnters === 3) {
-                                          consecutiveLogoEnters = 0;
-                                          
-                                          // If tournament is running -> pause
-                                          if (tournamentState === "running") {
-                                               logEvent("🧠: requesting pause!");
-                                               if (ws && ws.readyState === WebSocket.OPEN) {
-                                                   ws.send(JSON.stringify({ type: "PAUSE_TOURNAMENT_REQUEST" }));
-                                               }
-                                               else {
-                                                     logEvent("❌ Failed to request pause.");
-                                               }
-                                          }
-                                          // If tournament is paused -> resume
-                                          else if (tournamentState === "paused") {
-                                               logEvent("🧠: requesting resume!");
-                                               if (ws && ws.readyState === WebSocket.OPEN) {
-                                                   ws.send(JSON.stringify({ type: "RESUME_TOURNAMENT_REQUEST" }));
-                                               }
-                                               else {
-                                                     logEvent("❌ Failed to request resume.");
-                                               }
-                                          }
-                                          // If tournament is ended -> start new contest
-                                          else if (tournamentState === "ended") {
-                                               logEvent("🧠: requesting new contest!");
-                                               if (ws && ws.readyState === WebSocket.OPEN) {
-                                                   ws.send(JSON.stringify({ type: "NEW_TOURNAMENT_REQUEST" }));
-                                               }
-                                               else {
-                                                     logEvent("❌ Failed to request new contest.");
-                                               }
-                                          }
-                                          // Before tournament starts -> early start
-                                          else {
-                                               logEvent("🧠: requesting early tournament start!");
-                                               if (ws && ws.readyState === WebSocket.OPEN) {
-                                                   ws.send(JSON.stringify({ type: "START_TOURNAMENT_REQUEST" }));
-                                                    beginContestLayouts();
-                                               }
-                                               else {
-                                                     logEvent("❌ Failed to request early tournament start.");
-                                               }
-                                          }
-                                     }
-        }         
+let tournamentState = "not_started"; // States: not_started, running, paused, ended         
 
         ////------------called when user clicks "Register" button, sends registration data to server via WebSocket and shows dashboard on success ----------------------
         function register() {
@@ -201,6 +148,14 @@ let clientRegistrationTime = null; // Client's local time when delta was receive
                                               
                                               if (data.type === "DISQUALIFIED_FOR_INVALID_MOVE") {
                                                                                              logEvent(`❌ ${data.player} DISQUALIFIED for invalid move: ${JSON.stringify(data.invalidMove)}`);
+                                              }
+
+                                              if (data.type === "HEARTBEAT_REQUEST") {
+                                                  // Respond to server heartbeat to confirm connection
+                                                  if (ws && ws.readyState === WebSocket.OPEN) {
+                                                      ws.send(JSON.stringify({ type: "HEARTBEAT_RESPONSE" }));
+                                                  }
+                                                  return;
                                               }
 
         }

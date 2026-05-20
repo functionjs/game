@@ -30,7 +30,8 @@ var players = {};
 var adminClients = new Set(); // Track authenticated admin WebSocket connections
 var clientEmailMap = new Map(); // Map from WebSocket client to player email
 var emailToClientMap = new Map(); // Map from player email to WebSocket client
-                  // Refactored: Registration logic moved to WebSocket handler below
+var clientHeartbeat = new Map(); // Track last heartbeat time for each client
+var heartbeatInterval = null; // Heartbeat interval timer
          
          
 // Start the server
@@ -43,6 +44,56 @@ const PORT = 3000;
                                      console.log(`Tournament scheduled to start at ${new Date(tournamentStartTime).toLocaleString()}`);
                                      startTimeout = setTimeout(startChampionship, DEFAULT_START_DELAY_MS);
                                      broadcast({ type: "START_TIME_DELTA", delta: DEFAULT_START_DELAY_MS });
+                                     
+                                     // Start heartbeat mechanism every 5 seconds
+                                     heartbeatInterval = setInterval(() => {
+                                         const now = Date.now();
+                                         const HEARTBEAT_TIMEOUT = 10000; // 10 seconds timeout
+                                         
+                                         // Send heartbeat request to all connected clients
+                                         broadcast({ type: "HEARTBEAT_REQUEST", timestamp: now });
+                                         
+                                         // Check for unresponsive clients and mark as disconnected
+                                         clientHeartbeat.forEach((lastTime, client) => {
+                                             if (now - lastTime > HEARTBEAT_TIMEOUT) {
+                                                 // Client didn't respond to heartbeat - treat as disconnected
+                                                 const email = clientEmailMap.get(client);
+                                                 if (email && players[email]) {
+                                                     // Already handled by close event, but log it
+                                                     console.log(`⚠️ Client ${email} marked as unresponsive (no heartbeat)`);
+                                                 }
+                                             }
+                                         });
+                                         
+                                         // Send connection status update to admin
+                                         const connectedEmails = Array.from(clientHeartbeat.entries())
+                                             .filter(([client, lastTime]) => (now - lastTime) <= 10000)
+                                             .map(([client]) => clientEmailMap.get(client))
+                                             .filter(Boolean);
+                                         
+                                         console.log(`📊 Connected clients: ${connectedEmails.length} - [${connectedEmails.join(', ')}]`);
+                                         
+                                         // Broadcast connection status to all admin clients
+                                         const connectionStatus = {};
+                                         Object.keys(players).forEach(email => {
+                                             const client = emailToClientMap.get(email);
+                                             if (client) {
+                                                 const now = Date.now();
+                                                 const lastHB = clientHeartbeat.get(client) || now;
+                                                 connectionStatus[email] = (now - lastHB) <= 10000 ? 'connected' : 'disconnected';
+                                             } else {
+                                                 connectionStatus[email] = 'disconnected';
+                                             }
+                                         });
+                                         
+                                         adminClients.forEach(adminClient => {
+                                             adminClient.send(JSON.stringify({
+                                                 type: "CONNECTION_STATUS_UPDATE",
+                                                 connectionStatus: connectionStatus,
+                                                 timestamp: now
+                                             }));
+                                         });
+                                     }, 5000); // Check every 5 seconds
                                   }
                      );        
 
@@ -70,6 +121,12 @@ const DEFAULT_START_DELAY_MS = 15 * 60 * 1000; // 15 minutes after server start
                           async message => {
                                       try {
                                           let data = JSON.parse(message);
+                                          
+                                          // Handle heartbeat response from client
+                                          if (data.type === "HEARTBEAT_RESPONSE") {
+                                              clientHeartbeat.set(ws, Date.now());
+                                              return;
+                                          }
                                           
                                           // Handle admin authentication
                                           if (data.type === "ADMIN_AUTH") {
@@ -296,6 +353,7 @@ const DEFAULT_START_DELAY_MS = 15 * 60 * 1000; // 15 minutes after server start
                                                                       // Track the client-to-email mapping for disconnection detection
                                                                       clientEmailMap.set(ws, email);
                                                                       emailToClientMap.set(email, ws);
+                                                                      clientHeartbeat.set(ws, Date.now()); // Initialize heartbeat tracking
                                                                       
                                                                       // Broadcast the new player to all connected clients
                                                                        console.log(`... Registered!  Total players: ${playersNumber}`);
@@ -340,6 +398,7 @@ const DEFAULT_START_DELAY_MS = 15 * 60 * 1000; // 15 minutes after server start
                            console.log(`Player ${email} disconnected`);
                            clientEmailMap.delete(ws);
                            emailToClientMap.delete(email);
+                           clientHeartbeat.delete(ws); // Remove heartbeat tracking
                            
                            // Notify admin clients about the disconnection
                            adminClients.forEach(adminWs => {

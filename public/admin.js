@@ -210,6 +210,18 @@ function handleServerEvent(data) {
                 alert(`Error loading code: ${data.error}`);
             }
             break;
+        
+        case 'CONNECTION_STATUS_UPDATE':
+            // Update connection status for all players
+            if (data.connectionStatus) {
+                Object.entries(data.connectionStatus).forEach(([email, status]) => {
+                    if (players[email]) {
+                        players[email].status = status;
+                    }
+                });
+                updatePlayerTable();
+            }
+            break;
     }
 }
 
@@ -369,9 +381,11 @@ function showBotCode() {
         codeElement.className = 'language-javascript';
         codeDisplay.style.display = 'block';
         // Highlight the code using Highlight.js
-        if (window.hljs) {
-            hljs.highlightElement(codeElement);
-        }
+        let hljs = window.hljs;
+        delete codeElement.dataset.highlighted;
+         if (hljs) {
+             hljs.highlightElement(codeElement);
+         }
     }
 }
 
