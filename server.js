@@ -12,12 +12,13 @@ const  app = express(); // Express application for handling HTTP requests and se
 const   server = http.createServer(app); // Create an HTTP server to attach both Express and WebSocket to the same port
 const    wss = new WebSocketServer({ server }); // WebSocket server for real-time communication with the dashboard
 
-        app.use(express.json());
-        app.use(express.static('public')); // Serves your index.html
-
+        app.use(express.json()); // Middleware to parse JSON bodies in HTTP requests 
+        app.use(express.static('public')); // Serves your index.html in /public directory    
+        
          // --- ROUTES ---
          // Admin panel route
          app.get('/admin', (req, res) => {
+              console.log("/admin get request received!");
              res.sendFile(path.join(__dirname, 'public', 'admin.html'));
          });
          
