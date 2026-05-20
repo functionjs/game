@@ -143,6 +143,24 @@ const DEFAULT_START_DELAY_MS = 15 * 60 * 1000; // 15 minutes after server start
                                                   ws.send(JSON.stringify({ type: "ADMIN_CONFIG_UPDATED" }));
                                                   return;
                                               }
+                                              else if (data.type === "ADMIN_REQUEST_BOT_CODE") {
+                                                  const { email } = data;
+                                                  if (players[email]) {
+                                                      ws.send(JSON.stringify({
+                                                          type: "ADMIN_BOT_CODE_RESPONSE",
+                                                          email: email,
+                                                          name: players[email].name,
+                                                          code: players[email].code
+                                                      }));
+                                                  } else {
+                                                      ws.send(JSON.stringify({
+                                                          type: "ADMIN_BOT_CODE_RESPONSE",
+                                                          email: email,
+                                                          error: "Player not found"
+                                                      }));
+                                                  }
+                                                  return;
+                                              }
                                           }
                                           
                                            //for testing purposes, allow clients to request starting the tournament immediately instead of waiting for the scheduled time
@@ -423,7 +441,7 @@ let isPaused = false;
                                
                                // Generate and send initial tournament Matrix
                                generateInitialMatrix();
-                                broadcast({ type: "TOURNAMENT_STARTED", players: playerList, matchMatrix: Matrix, config: CONFIG });
+                                broadcast({ type: "TOURNAMENT_STARTED", players: players, matchMatrix: Matrix, config: CONFIG });
                                
                                 // Run a round-robin tournament where each Bot plays against every other Bot
                                 startSeed++; // Change the seed for each tournament to generate different pile configurations and forbidden moves for each tournament, while still maintaining reproducibility if needed by using the same seed. This allows for variety in the game conditions across tournaments, which can make the competition more interesting and challenging for the players, while still allowing for consistent conditions if desired by using a fixed seed.

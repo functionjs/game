@@ -137,7 +137,7 @@ function handleServerEvent(data) {
             if (countdownInterval) clearInterval(countdownInterval);
             document.getElementById('countdown-timer').textContent = '🎉 Tournament Started!';
             if (data.players) {
-                players = data.players;
+                Object.assign(players, data.players);
                 updatePlayerTable();
             }
             updateStatus('Tournament Running', '#00ffcc');
@@ -193,6 +193,22 @@ function handleServerEvent(data) {
         
         case 'ADMIN_CONFIG_UPDATED':
             alert('Configuration updated successfully!');
+            break;
+        
+        case 'ADMIN_BOT_CODE_RESPONSE':
+            if (data.code) {
+                players[data.email].code = data.code;
+                const codeElement = document.getElementById('bot-code-display').querySelector('code');
+                codeElement.textContent = data.code;
+                codeElement.className = 'language-javascript';
+                document.getElementById('bot-code-display').style.display = 'block';
+                // Highlight the code using Highlight.js
+                if (window.hljs) {
+                    hljs.highlightElement(codeElement);
+                }
+            } else if (data.error) {
+                alert(`Error loading code: ${data.error}`);
+            }
             break;
     }
 }
@@ -329,6 +345,7 @@ function updatePlayerListFromObject() {
 function showBotCode() {
     const select = document.getElementById('player-code-select');
     const codeDisplay = document.getElementById('bot-code-display');
+    const codeElement = codeDisplay.querySelector('code');
     const email = select.value;
     
     if (!email || !players[email]) {
@@ -337,8 +354,25 @@ function showBotCode() {
     }
     
     const player = players[email];
-    codeDisplay.textContent = player.code || 'No code available';
-    codeDisplay.style.display = 'block';
+    
+    if (!player.code) {
+        // Request code from server if not available
+        codeElement.textContent = 'Loading code...';
+        codeDisplay.style.display = 'block';
+        ws.send(JSON.stringify({
+            type: 'ADMIN_REQUEST_BOT_CODE',
+            email: email
+        }));
+    } else {
+        // Display already loaded code with syntax highlighting
+        codeElement.textContent = player.code;
+        codeElement.className = 'language-javascript';
+        codeDisplay.style.display = 'block';
+        // Highlight the code using Highlight.js
+        if (window.hljs) {
+            hljs.highlightElement(codeElement);
+        }
+    }
 }
 
 /**

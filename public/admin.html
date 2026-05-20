@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tournament Admin Panel</title>
     <link rel="stylesheet" href="style.css">
+    <!-- Syntax highlighting with Highlight.js -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 </head>
 <body>
     <div id="admin-login-view" class="card admin-login-container">
@@ -75,7 +78,7 @@
             <select id="player-code-select" onchange="showBotCode()" style="width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 5px; background: linear-gradient(rgb(0, 0, 180), rgb(0,0,48)); color: #00ffcc; border: none;">
                 <option value="">Select a player to view code...</option>
             </select>
-            <pre id="bot-code-display" style="display: none;"></pre>
+            <pre id="bot-code-display" style="display: none;"><code class="language-javascript"></code></pre>
         </div>
 
         <!-- Status Information -->
