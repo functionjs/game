@@ -46,54 +46,62 @@ const PORT = 3000;
                                      broadcast({ type: "START_TIME_DELTA", delta: DEFAULT_START_DELAY_MS });
                                      
                                      // Start heartbeat mechanism every 5 seconds
-                                     heartbeatInterval = setInterval(() => {
-                                         const now = Date.now();
-                                         const HEARTBEAT_TIMEOUT = 10000; // 10 seconds timeout
-                                         
-                                         // Send heartbeat request to all connected clients
-                                         broadcast({ type: "HEARTBEAT_REQUEST", timestamp: now });
-                                         
-                                         // Check for unresponsive clients and mark as disconnected
-                                         clientHeartbeat.forEach((lastTime, client) => {
-                                             if (now - lastTime > HEARTBEAT_TIMEOUT) {
-                                                 // Client didn't respond to heartbeat - treat as disconnected
-                                                 const email = clientEmailMap.get(client);
-                                                 if (email && players[email]) {
-                                                     // Already handled by close event, but log it
-                                                     console.log(`⚠️ Client ${email} marked as unresponsive (no heartbeat)`);
-                                                 }
-                                             }
-                                         });
-                                         
-                                         // Send connection status update to admin
-                                         const connectedEmails = Array.from(clientHeartbeat.entries())
-                                             .filter(([client, lastTime]) => (now - lastTime) <= 10000)
-                                             .map(([client]) => clientEmailMap.get(client))
-                                             .filter(Boolean);
-                                         
-                                         console.log(`📊 Connected clients: ${connectedEmails.length} - [${connectedEmails.join(', ')}]`);
-                                         
-                                         // Broadcast connection status to all admin clients
-                                         const connectionStatus = {};
-                                         Object.keys(players).forEach(email => {
-                                             const client = emailToClientMap.get(email);
-                                             if (client) {
-                                                 const now = Date.now();
-                                                 const lastHB = clientHeartbeat.get(client) || now;
-                                                 connectionStatus[email] = (now - lastHB) <= 10000 ? 'connected' : 'disconnected';
-                                             } else {
-                                                 connectionStatus[email] = 'disconnected';
-                                             }
-                                         });
-                                         
-                                         adminClients.forEach(adminClient => {
-                                             adminClient.send(JSON.stringify({
-                                                 type: "CONNECTION_STATUS_UPDATE",
-                                                 connectionStatus: connectionStatus,
-                                                 timestamp: now
-                                             }));
-                                         });
-                                     }, 5000); // Check every 5 seconds
+                                   const HEARTBEAT_TIMEOUT = 5000;
+                                    heartbeatInterval = setInterval(() => {
+                                                                           const now = Date.now();
+                                                                            // Send heartbeat request to all connected clients
+                                                                            broadcast({ type: "HEARTBEAT_REQUEST", timestamp: now });
+                                                                           
+                                                                             // Check for unresponsive clients and mark as disconnected
+                                                                             clientHeartbeat
+                                                                                 .forEach((lastTime, client) => {
+                                                                                                                 if (now - lastTime > HEARTBEAT_TIMEOUT) {
+                                                                                                                     // Client didn't respond to heartbeat - treat as disconnected
+                                                                                                                     const email = clientEmailMap.get(client);
+                                                                                                                      if (email && players[email]) {
+                                                                                                                          // Already handled by close event, but log it
+                                                                                                                          console.log(`⚠️ Client ${email} marked as unresponsive (no heartbeat)`);
+                                                                                                                      }
+                                                                                                                 }
+                                                                                                                });
+                                                                           
+                                                                              // Send connection status update to admin
+                                                                              const connectedEmails = Array.from(clientHeartbeat.entries())
+                                                                                                          .filter(([client, lastTime]) => (now - lastTime) <= 10000)
+                                                                                                               .map(([client]) => clientEmailMap.get(client))
+                                                                                                                    .filter(Boolean);
+                                                                           
+                                                                              //console.log(`📊 Connected clients: ${connectedEmails.length} - [${connectedEmails.join(', ')}]`);
+                                                                           
+                                                                           // Broadcast connection status to all admin clients
+                                                                           const connectionStatus = {};
+                                                                            Object.keys(players)
+                                                                                       .forEach(email => {
+                                                                                                          const client = emailToClientMap.get(email);
+                                                                                                           if (client) {
+                                                                                                               const now = Date.now();
+                                                                                                                const lastHB = clientHeartbeat.get(client) || now;
+                                                                                                                 connectionStatus[email] = (now - lastHB) <= 10000 ? 'connected' : 'disconnected';
+                                                                                                           }
+                                                                                                           else {
+                                                                                                                 connectionStatus[email] = 'disconnected';
+                                                                                                           }
+                                                                            });
+                                                                           
+                                                                             let connectionStatusObj = {
+                                                                                                        type: "CONNECTION_STATUS_UPDATE",
+                                                                                                        connectionStatus: connectionStatus,
+                                                                                                        timestamp: now
+                                                                                                       }
+                                                                              //Message = `📊 Connection status update: ${connectedEmails.length} connected - [${connectedEmails.join(', ')}]`;
+                                                                              adminClients.forEach(adminClient => {
+                                                                                                                   adminClient.send(JSON.stringify({
+                                                                                                                       type: "CONNECTION_STATUS_UPDATE",
+                                                                                                                       connectionStatus: connectionStatus,
+                                                                                                                       timestamp: now
+                                                                                                                   }));
+                                                                              });
+                                                                           }, HEARTBEAT_TIMEOUT); // Check every 5 seconds
                                   }
                      );        
 

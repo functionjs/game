@@ -13,13 +13,13 @@ let countdownTime = 0;
  * SHA256 hash function for password authentication
  */
 async function sha256(message) {
-                                 console.log(`function sha256(${message})`);
+                                 //console.log(`function sha256(${message})`);
                                  const msgBuffer = new TextEncoder().encode(message);
-                                  console.log(`msgBuffer: ${msgBuffer}`);
+                                  //console.log(`msgBuffer: ${msgBuffer}`);
                                   const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
                                    const hashArray = Array.from(new Uint8Array(hashBuffer));
                                     const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-                                     console.log(`hashHex =  ${hashHex}`);
+                                     //console.log(`hashHex =  ${hashHex}`);
     return hashHex;
 }
 
@@ -37,9 +37,9 @@ async function authenticateAdmin() {
      }
 
      const hash = await sha256(password);
-     console.log(
-`Entered password hash: ${hash} \n
-         Expected hash: ${ADMIN_PASSWORD_HASH}`);
+//     console.log(
+//`Entered password hash: ${hash} \n
+//         Expected hash: ${ADMIN_PASSWORD_HASH}`);
     
     if (hash === ADMIN_PASSWORD_HASH) {
          isAuthenticated = true;
@@ -80,7 +80,11 @@ function connectWebSocket() {
 
     ws.onclose = () => {
         console.log('Admin disconnected from WebSocket');
-        updateConnectionStatus('Disconnected', '#999');
+        updateConnectionStatus('undefined', '#999');
+        const timerEl = document.getElementById('countdown-timer');
+        if (timerEl) {
+            timerEl.textContent = 'Admin disconnected from Server';
+        }
         // Attempt to reconnect after 3 seconds
         setTimeout(connectWebSocket, 3000);
     };
@@ -128,7 +132,7 @@ function handleServerEvent(data) {
         case 'NEW_PLAYER':
             // When a new player registers, the server broadcasts their name
             // We should request updated player list from the admin connection
-            console.log('New player registered:', data.name);
+            // console.log('New player registered:', data.name);
             // For admin, we'll update the list when we get tournament updates
             break;
         

@@ -155,6 +155,8 @@ let clientRegistrationTime = null; // Client's local time when delta was receive
                                                   if (ws && ws.readyState === WebSocket.OPEN) {
                                                       ws.send(JSON.stringify({ type: "HEARTBEAT_RESPONSE" }));
                                                   }
+                                                  let hljs = window.hljs;
+                                                       hljs.highlightAll(); // Highlight any new code snippets in the log
                                                   return;
                                               }
 
@@ -331,5 +333,51 @@ var countdownInterval=null;
 
 
 // Initialize ws connection when page loads
+// Initialize code syntax highlighting for bot code textarea
+function initializeCodeHighlighting() {
+    const botCodeInput = document.getElementById('bot-code');
+    if (!botCodeInput) return;
+
+    // Create a hidden pre/code element for highlighting
+    const highlightContainer = document.createElement('div');
+    highlightContainer.id = 'code-highlight-container';
+    highlightContainer.style.position = 'absolute';
+    highlightContainer.style.visibility = 'hidden';
+    highlightContainer.style.height = '0';
+    highlightContainer.style.overflow = 'hidden';
+    document.body.appendChild(highlightContainer);
+
+    // Create pre and code elements for highlighting
+    const pre = document.createElement('pre');
+    const code = document.createElement('code');
+    code.className = 'language-javascript';
+    pre.appendChild(code);
+    highlightContainer.appendChild(pre);
+
+    // Update highlighting function
+    function updateHighlighting() {
+        const text = botCodeInput.value;
+        code.textContent = text;
+        
+        // Apply highlight.js if available
+        if (window.hljs) {
+            delete code.dataset.highlighted;
+            hljs.highlightElement(code);
+        }
+    }
+
+    // Listen for input changes
+    botCodeInput.addEventListener('input', updateHighlighting);
+    botCodeInput.addEventListener('change', updateHighlighting);
+
+    // Initial highlighting
+    updateHighlighting();
+}
+
+// Call initialization when page loads
+document.addEventListener('DOMContentLoaded', () => {
+    initializeCodeHighlighting();
+});
+
 connect();
 

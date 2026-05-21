@@ -6,22 +6,28 @@
      <meta name="viewport" content="width=device-width, initial-scale=1.0">
      <title>Save Your Friend! - Bot Championship</title>
      <link rel="stylesheet" href="style.css">
+     <!-- Syntax highlighting with Highlight.js -->
+     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+     <script src="highlight.min.js"></script>
  </head>
 
  <body>
   <center>
+    <!--
      <header>
-      <a href="rules.html" class="rules-link" target="_blank">
-        <h1> 🪙 Make Your Super Gamer Bot! </h1>
-      </a>
- 
-      <img id="logo" src="studentbot.png" alt="Arena Logo" title="Make Your Super Gamer Bot!">
-         
+     </header>
+    -->
+     <main id="registration-view">
+
       <p id="status-text">Connecting to server...</p>
       <p id="deadline-timer" class="deadline-timer">Tournament starts in 15:00</p> 
-     </header>
- 
-     <main id="registration-view">
+
+       <a href="rules.html" class="rules-link" target="_blank">
+         <h1> 🪙 Task of Your Super Gamer Bot! </h1>
+       </a>
+
+       <img id="logo" src="studentbot.png" alt="Arena Logo" title="Make Your Super Gamer Bot!">
+
       <section class="card">
          <h2>Register Your Avatar-Bot</h2>
 
@@ -31,7 +37,7 @@
          </div>
          <br>
             <label id="invitation-label" for="bot-code">Write your Bot JS logic as function play() here:</label>
-          <textarea id="bot-code" spellcheck="false">
+          <textarea id="bot-code" spellcheck="false" class="language-javascript">
  // piles:     array of integers  (coins) representing the current state of the game
  // forbidden: array of forbidden moves
  // context:   { mode: CONFIG.mode, timeRemaining: player.timeBank } 
